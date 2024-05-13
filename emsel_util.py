@@ -640,12 +640,15 @@ def windowMatrix (values, halfWindowSize=25):
 
 def save_csv_output(hmm_dict, hmm_path):
     num_reps = hmm_dict["neutral_ll"].shape[0]
-    info_array = np.zeros((num_reps, 3*len(hmm_dict["update_types"])), dtype=float)
-    info_array[:, 0] = hmm_dict["neutral_ll"]
-    cols = ["index", "neutral_ll"]
-    for ud_i, ud_type in enumerate(hmm_dict["update_types"][1:], start=1):
-        info_array[:, 3*ud_i] = hmm_dict[f"{ud_type}_run"]["ll_final"]
-        info_array[:, 3*ud_i+1:3*ud_i+3] = hmm_dict[f"{ud_type}_run"]["s_final"].T
+    info_array = np.zeros((num_reps, 2+3*(len(hmm_dict["selection_modes"])-1)), dtype=float)
+    info_array[:, 0] = hmm_dict["samples_idxs"]
+    info_array[:, 1] = hmm_dict["neutral_ll"].flatten()
+    cols = ["unfiltered index", "neutral_ll"]
+    for ud_i, ud_type in enumerate(hmm_dict["selection_modes"][1:], start=1):
+        print(hmm_dict[f"{ud_type}_run"]["s_final"].shape)
+        print(hmm_dict[f"{ud_type}_run"]["s_final"].T)
+        info_array[:, 3*ud_i-1] = hmm_dict[f"{ud_type}_run"]["ll_final"].flatten()
+        info_array[:, 3*ud_i:3*(ud_i+1)-1] = hmm_dict[f"{ud_type}_run"]["s_final"].T
         cols.extend([f"{ud_type}_ll", f"{ud_type}_s1", f"{ud_type}_s2"])
-    info_df = pd.DataFrame(info_array, index = hmm_dict["sample_idxs"], columns=cols)
-    info_df.to_csv(hmm_path)
+    info_df = pd.DataFrame(info_array, columns=cols)
+    info_df.to_csv(hmm_path, index=False)

@@ -124,7 +124,7 @@ class HMM:
         s1 = s_vector[0]
         s2 = s_vector[1]
         p_primes = np.clip(self.gs + self.gs * self.qs * (s2 * self.gs + s1 * (1 - 2 * self.gs)), 0, 1)
-        sigmas = np.sqrt(self.gs * self.qs / 2*self.Ne)
+        sigmas = np.sqrt(self.gs * self.qs / (2*self.Ne))
         a_one = np.zeros((1, self.gs.shape[0]))
         a_one[:, 0] = 1.
         a_all = np.concatenate((a_one, np.diff(norm.cdf(np.expand_dims(self.integral_bounds, axis=-1),
@@ -148,7 +148,6 @@ class HMM:
     @staticmethod
     @njit(fastmath=True)
     def forward_one_numba(init_state, trans_matrix, a_t_to_bpmf, bpmf, sample_locs):
-
         N = init_state.shape[0]
         T = a_t_to_bpmf.shape[0]
         alphas_hat = np.zeros((T, N))
@@ -159,7 +158,6 @@ class HMM:
             alphas_tilde = bpmf[a_t_to_bpmf[t], :] * np.dot(alphas_hat[t-1, :], trans_matrix)
             cs[t] = 1. / np.sum(alphas_tilde)
             alphas_hat[t, :] = cs[t] * alphas_tilde
-
         return alphas_hat.T, cs
 
     @staticmethod

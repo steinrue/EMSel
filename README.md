@@ -5,7 +5,13 @@ The subdirectory [figures/](figures/) contains all code to compile the data and 
 
 ## Installation
 
-To use EMSel, either clone this repository or download it as a .zip file. EMSel was developed in Python 3.8, so running it in a standalone environment is encouraged. A list of additional packages needed is in `requirements.txt`; to install everything needed, run the command `pip install -r requirements.txt`.
+We recommend following these steps to install EMSel:
+
+0. Install `conda`, if you have not done so already.
+1. Clone this repository or download it as a .zip file.
+2. Set up a new Python 3.9 environment via the command `conda create --name {env_name} python=3.9`.
+3. Navigate to the EMSel root folder and activate the environment via the command `conda activate {env_name}`.
+4. Install all required packages via the command `conda install --file requirements.txt -c conda-forge`.
 
 ## Running EMSel
 
@@ -29,10 +35,10 @@ Any VCF that can be read by `scikit-allele`, it can be used with EMSel. Using EM
 ### Minimal example and output
 
 A minimal sample call to EMSel with a CSV:
-`python run_emsel.py sample_datasets/add_s025_g251_d25_data.csv output_EM time_after_zero`
+`python run_emsel.py sample_datasets/add_s025_g251_d25_data.csv output_EM --time_after_zero`
 
 A minimal sample call with a VCF:
-`python run_emsel.py sample_datasets/GB_c22.vcf output_EM --info_file sample_datasets/GB_individuals.table --info_cols Genetic_ID Date_mean time_before_present`
+`python run_emsel.py sample_datasets/GB_c22.vcf output_EM --info_file sample_datasets/GB_individuals.table --info_cols Genetic_ID Date_mean --time_before_present`
 
 Both of these will create the file `output_EM.csv` containing a simple table of the results of running EMSel in all available modes of selection. The table is formatted as a indexed and column-labelled csv with one row for each replicate with (3M+2) columns per row, where M equals the number of non-neutral selection modes analyzed under. The first column are the index of each row within the unfiltered dataset (see -maf and --min_sample_density for a description of the filters). The second column is the neutral log-likelihood. Each set of 3 subsequent columns is the tuple (log_likelihood, s_1, s_2) for each selection mode at termination of the algorithm.
 
@@ -43,10 +49,10 @@ A more complete output file will also be saved if the `--full_output` flag is us
 In addition to the required `input` and `output` paths, EMSel has one required argument:
 
 ```
-time_after_zero | time_before_present
+--time_after_zero | --time_before_present
     Use of exactly one of these arguments is required to specify whether the sample dates provided in the CSV/VCF start
-    at zero at the earliest time and count up towards the present (time_after_zero) or start at zero at the present and
-    count up moving backward in time (time_before_present).
+    at zero at the earliest time and count up towards the present (--time_after_zero) or start at zero at the present and
+    count up moving backward in time (--time_before_present).
 ```
 
 and the following optional arguments:

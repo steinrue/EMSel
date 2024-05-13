@@ -21,9 +21,9 @@ def run_one_s(iter_hmm, obs_counts, nts, sample_locs, loc, tol, max_iter, min_in
 parser = argparse.ArgumentParser()
 parser.add_argument("input_path", type=argparse.FileType("rb"), help="path to input dataset")
 parser.add_argument("output_path", type=argparse.FileType("wb"), help="path to output file")
-group = parser.add_mutually_exclusive_group()
-group.add_argument("time_before_present", action="store_true", help="dates provided start at a number at the earliest time and count down towards the present")
-group.add_argument("time_after_zero", action="store_true", help="dates provided start at zero at the earliest time and count up towards the present")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--time_before_present", action="store_true", help="dates provided start at a number at the earliest time and count down towards the present")
+group.add_argument("--time_after_zero", action="store_true", help="dates provided start at zero at the earliest time and count up towards the present")
 parser.add_argument("-ytg", "--years_to_gen", type=float, default=1, help="years per generation in VCF or CSV")
 parser.add_argument("-maf", "--min_allele_freq", type=float, default=0.05, help="filters out replicates with mean minor allele frequency < MAF")
 parser.add_argument("--min_sample_density", type=float, default=0.1, help="filters out replicates with fewer than (min_sample_density * max_samples) total samples")
@@ -31,13 +31,13 @@ parser.add_argument("-nc", "--num_cores", type=int, default=1, help="number of C
 parser.add_argument("-ns", "--num_states", type=int, help="number of approx states in HMM", default=500)
 parser.add_argument("--s_init", type=float, nargs=2, default=[0., 0.], help="vector of initial s value")
 parser.add_argument("-sid", "--starting_init_dist", default="uniform", help="initial initial condition to use")
+parser.add_argument("--sid_dict", nargs='*', help="initial condition dictionary")
 parser.add_argument("-t", "--tol", type=float, default=1e-3, help="ll_i - ll_(i-1) < tol stops the run")
 parser.add_argument("-m", "--maxiter", type=int, default=2000, help="maximum number of iterations")
 parser.add_argument("-Ne", type=int, default=10000, help="effective population size for the HMM")
 parser.add_argument("--hidden_interp", default="chebyshev", help="interpolation of the hidden states (linear vs. Chebyshev nodes for now)")
 parser.add_argument("--ic_update_type", default="beta", help="type of init cond estimation")
 parser.add_argument("--progressbar", action="store_true", help="adds a tqdm progress bar")
-parser.add_argument("--sid_dict", nargs='*', help="initial condition dictionary")
 parser.add_argument("--selection_modes", default="all", nargs='*', help="strings of update types to run")
 parser.add_argument("--min_itercount", type=int, default=5, help="minimum number of EM iterations before terminating")
 parser.add_argument("--min_init_val", type=float, default=1e-8, help="minimum value of an init state probability")
@@ -48,7 +48,6 @@ parser.add_argument("--full_output", action="store_true", help="save a pickle fi
 parser.add_argument("--force", type=str, nargs=1, help="if the VCF file only contains homozygous loci, force it to be read as either haploid or diploid")
 parser.add_argument("--no_neutral", action="store_true", help="override the requirement that neutral be run")
 args = parser.parse_args()
-
 
 hmm_dd = {}
 hmm_dd["approx_states"] = args.num_states
@@ -61,19 +60,19 @@ hmm_dd["Ne"] = args.Ne
 hmm_dd["hidden_interp"] = args.hidden_interp
 hmm_dd["ic_update_type"] = args.ic_update_type
 hmm_dd["selection_modes"] = args.selection_modes
-hmm_dd["ic_dict"] = {}
+hmm_dd["sid_dict"] = {}
 hmm_dd["min_ic"] = args.min_itercount
 hmm_dd["min_init_val"] = args.min_init_val
-hmm_dd["maf_thresh"] = args.maf
+hmm_dd["maf_thresh"] = args.min_allele_freq
 hmm_dd["min_sample_density"] = args.min_sample_density
 
-if args.ic_dict is not None:
-    for ic_pair in args.ic_dict:
+if args.sid_dict is not None:
+    for ic_pair in args.sid_dict:
         k, v = ic_pair.split('=')
         try:
-            hmm_dd["ic_dict"][k] = float(v)
+            hmm_dd["sid_dict"][k] = float(v)
         except:
-            hmm_dd["ic_dict"][k] = v
+            hmm_dd["sid_dict"][k] = v
 
 
 
@@ -143,26 +142,25 @@ if pd_path.suffix == ".vcf" and args.full_output:
     hmm_dd["ref_allele"] = vcf_file["variants/REF"][combo_mask]
     hmm_dd["alt_allele"] = vcf_file["variants/ALT"][combo_mask, 0]
 
-
-all_update_types = ["neutral", "add", "dom", "rec", "het", "full"]
+all_selection_modes = ["neutral", "add", "dom", "rec", "het", "full"]
 if hmm_dd["selection_modes"] == "all" or hmm_dd["selection_modes"] == ["all"]:
-    update_types = all_update_types
-    hmm_dd["selection_modes"] = all_update_types
+    selection_modes = all_selection_modes
+    hmm_dd["selection_modes"] = all_selection_modes
 else:
-    if len([update_i for update_i in hmm_dd["selection_modes"] if update_i not in all_update_types]) > 0:
+    if len([update_i for update_i in hmm_dd["selection_modes"] if update_i not in all_selection_modes]) > 0:
         raise ValueError("Invalid update type specified!")
     if "neutral" not in hmm_dd["selection_modes"] and not args.no_neutral:
         hmm_dd["selection_modes"] = ["neutral", *hmm_dd["selection_modes"]]
-    update_types = hmm_dd["selection_modes"]
-for update_i, update_type in enumerate(update_types):
-    print(f"{update_type}!")
+    selection_modes = hmm_dd["selection_modes"]
+for selmode_i, sel_type in enumerate(selection_modes):
+    print(f"{sel_type}!")
     if num_cores > 1:
         parallel_loop = tqdm(range(hmm_data["final_data"].shape[0])) if args.progressbar else range(hmm_data["final_data"].shape[0])
         with Parallel(n_jobs=num_cores) as parallel:
             iter_hmm = HMM(hmm_dd["approx_states"], hmm_dd["Ne"],hmm_dd["s_init"],
-                        init_cond = hmm_dd["init_cond"], hidden_interp = hmm_dd["hidden_interp"], **hmm_dd["ic_dict"])
-            iter_hmm.update_type = update_type
-            iter_hmm.update_func, iter_hmm.update_func_args = iter_hmm.get_update_func(update_type, {})
+                        init_cond = hmm_dd["init_cond"], hidden_interp = hmm_dd["hidden_interp"], **hmm_dd["sid_dict"])
+            iter_hmm.update_type = sel_type
+            iter_hmm.update_func, iter_hmm.update_func_args = iter_hmm.get_update_func(sel_type, {})
             iter_hmm.init_update_type = hmm_dd["ic_update_type"]
             iter_hmm.init_update_func, iter_hmm.init_params_to_state_func, iter_hmm.init_update_size = iter_hmm.get_init_update_func(hmm_dd["ic_update_type"])
             res = parallel(delayed(run_one_s)(iter_hmm, hmm_data["final_data"][i], hmm_data["num_samples"][i], hmm_data["sample_times"][i], i, hmm_dd["tol"], hmm_dd["max_iter"], hmm_dd["min_init_val"], hmm_dd["min_ic"]) for i in parallel_loop)
@@ -174,11 +172,11 @@ for update_i, update_type in enumerate(update_types):
             "exit_codes": np.array([rp[5] for rp in res]),
         }
     else:
-        iter_hmm = HMM(hmm_dd["approx_states"], hmm_dd["Ne"], np.array(hmm_dd["s_init"]),init_cond=hmm_dd["init_cond"], hidden_interp=hmm_dd["hidden_interp"], **hmm_dd["ic_dict"])
-        iter_hmm.update_type = update_type
-        iter_hmm.update_func, iter_hmm.update_func_args = iter_hmm.get_update_func(update_type, {})
+        iter_hmm = HMM(hmm_dd["approx_states"], hmm_dd["Ne"], np.array(hmm_dd["s_init"]),init_cond=hmm_dd["init_cond"], hidden_interp=hmm_dd["hidden_interp"], **hmm_dd["sid_dict"])
+        iter_hmm.update_type = sel_type
+        iter_hmm.update_func, iter_hmm.update_func_args = iter_hmm.get_update_func(sel_type, {})
         s_hist, s_final, ll_hist, ic_dist, itercount_hist, exit_codes = iter_hmm.compute_s(hmm_data["final_data"], hmm_data["num_samples"], hmm_data["sample_times"],
-                                   update_type, hmm_dd["ic_update_type"], hmm_dd["tol"], hmm_dd["max_iter"],progressbar=args.progressbar)
+                                                                    sel_type, hmm_dd["ic_update_type"], hmm_dd["tol"], hmm_dd["max_iter"], progressbar=args.progressbar)
         hmm_dict = {
             "s_final": s_final,
             "ll_hist": ll_hist,
@@ -187,16 +185,16 @@ for update_i, update_type in enumerate(update_types):
             "exit_codes": exit_codes
         }
     hmm_dict["ll_final"] = np.array([hmm_dict["ll_hist"][hmm_dict["itercount_hist"][i], i] for i in range(hmm_dict["itercount_hist"].shape[0])])
-    if update_type == "neutral":
-        hmm_dd["neutral_ll"] = np.array([hmm_dict["ll_hist"][hmm_dict["itercount_hist"][i], i] for i in range(hmm_dict["itercount_hist"].shape[0])])
+    del hmm_dict["ll_hist"]
+    if sel_type == "neutral":
+        hmm_dd["neutral_ll"] = hmm_dict["ll_final"]
         hmm_dd["neutral_ic"] = hmm_dict["ic_dist"]
         hmm_dd["neutral_itercount"] = hmm_dict["itercount_hist"]
     else:
-        hmm_dd[f"{update_type}_run"] = hmm_dict
-    del hmm_dict["ll_hist"]
+        hmm_dd[f"{sel_type}_run"] = hmm_dict
 
 print("saving output...")
-save_csv_output(hmm_dd, hmm_path)
+save_csv_output(hmm_dd, hmm_path.with_suffix(".csv"))
 if args.full_output:
     with open(hmm_path.with_suffix(".pkl"), "wb") as file:
         pickle.dump(hmm_dd, file)
