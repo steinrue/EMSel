@@ -20,7 +20,7 @@ def run_one_s(iter_hmm, obs_counts, nts, sample_locs, loc, tol, max_iter, min_in
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_path", type=argparse.FileType("rb"), help="path to input dataset")
-parser.add_argument("output_path", type=argparse.FileType("wb"), help="path to output file")
+parser.add_argument("output_path", type=str, help="base path of output file - appropriate suffixes added later")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--time_before_present", action="store_true", help="dates provided start at a number at the earliest time and count down towards the present")
 group.add_argument("--time_after_zero", action="store_true", help="dates provided start at zero at the earliest time and count up towards the present")
@@ -75,8 +75,7 @@ if args.sid_dict is not None:
             hmm_dd["sid_dict"][k] = v
 
 
-
-hmm_path = Path(args.output_path.name)
+hmm_basepath = args.output_path
 pd_path = Path(args.input_path.name)
 print(pd_path)
 print(pd_path.suffix)
@@ -194,7 +193,7 @@ for selmode_i, sel_type in enumerate(selection_modes):
         hmm_dd[f"{sel_type}_run"] = hmm_dict
 
 print("saving output...")
-save_csv_output(hmm_dd, hmm_path.with_suffix(".csv"))
+save_csv_output(hmm_dd, hmm_basepath+".csv")
 if args.full_output:
-    with open(hmm_path.with_suffix(".pkl"), "wb") as file:
+    with open(hmm_basepath+".pkl", "wb") as file:
         pickle.dump(hmm_dd, file)

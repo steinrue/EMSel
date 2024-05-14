@@ -6,7 +6,6 @@ from numba import njit
 from scipy.stats import chi2, beta
 from copy import deepcopy
 
-#need nptyping and beartype :((
 def generate_wf_data(p: float, N: int, N_samples: int, s1: int, s2: int, num_gens: int, sample_locs, seed: int):
     rng = np.random.default_rng(seed=seed)
     freqs = np.zeros(num_gens)
@@ -66,7 +65,7 @@ def forward_one_gen(p_vector, pop_size, s1, s2, rng, small_s=False):
         p_prime_vector = p_vector + p_vector * (1 - p_vector) * ((1 - 2 * p_vector) * s1 + p_vector * s2)
     else:
         p_prime_vector = p_vector*(1+s1-s1*p_vector+s2*p_vector)/(1+2*s1*p_vector+s2*p_vector**2-2*s1*p_vector**2)
-    return rng.binomial(2*pop_size, p_prime_vector) / 2*pop_size
+    return rng.binomial(2*pop_size, p_prime_vector) / (2*pop_size)
 
 
 def generate_data(pd):
@@ -645,8 +644,6 @@ def save_csv_output(hmm_dict, hmm_path):
     info_array[:, 1] = hmm_dict["neutral_ll"].flatten()
     cols = ["unfiltered index", "neutral_ll"]
     for ud_i, ud_type in enumerate(hmm_dict["selection_modes"][1:], start=1):
-        print(hmm_dict[f"{ud_type}_run"]["s_final"].shape)
-        print(hmm_dict[f"{ud_type}_run"]["s_final"].T)
         info_array[:, 3*ud_i-1] = hmm_dict[f"{ud_type}_run"]["ll_final"].flatten()
         info_array[:, 3*ud_i:3*(ud_i+1)-1] = hmm_dict[f"{ud_type}_run"]["s_final"].T
         cols.extend([f"{ud_type}_ll", f"{ud_type}_s1", f"{ud_type}_s2"])

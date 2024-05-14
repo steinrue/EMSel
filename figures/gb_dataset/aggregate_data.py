@@ -181,7 +181,8 @@ with open(complete_agg_data_path, "wb") as file:
     pickle.dump(cdata, file)
 
 superfinal_binned_data = superfinal_binned_data[1:, :]
-np.savetxt(binned_path, superfinal_binned_data, delimiter="\t", fmt="%d")
+np.savetxt(binned_path, superfinal_binned_data, delimiter="\t", fmt="%d",
+           header="Each row = one replicate; each set of three columns = (sampling time, total samples, derived alleles)")
 
 np.savetxt(means_path, np.concatenate(([MAF_THRESH], cdata["all_means"])), delimiter="\n", fmt="%.4f")
 np.savetxt(missingness_path, np.concatenate(([MISSING_THRESH], cdata["all_missingness"])), delimiter="\n", fmt="%.4f")

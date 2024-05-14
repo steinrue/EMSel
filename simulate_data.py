@@ -21,15 +21,33 @@ parser.add_argument("-s", "--sel_coeffs", nargs="+", type=float, default=[.005, 
 parser.add_argument("--sel_types", nargs="+", type=str, default=["neutral", "add", "dom", "rec", "over", "under"], help="types of selection to simulate. valid types are 'neutral', 'add', 'dom', 'rec', 'over', 'under', for now.")
 parser.add_argument("-g", "--num_gens", nargs="+", type=int, default=[101, 251, 1001], help="number of generations to simulate")
 parser.add_argument("-ic", "--init_conds", nargs="+", type=float_or_str, default=[.005, .25, "recip"], help="initial conditions to simulate")
-parser.add_argument("-ns", "--num_samples", type=int, default=ns_default, help="number of samples to draw at each sampling timepoint")
-parser.add_argument("-st", "--sampling_times", type=int, default=st_default, help="number of times to draw samples")
-parser.add_argument("-Ne", type=int, default=Ne_default, help="effective population size")
+parser.add_argument("-ns", "--num_samples", type=int, default=None, help="number of samples to draw at each sampling timepoint")
+parser.add_argument("-st", "--sampling_times", type=int, default=None, help="number of times to draw samples")
+parser.add_argument("-Ne", type=int, default=None, help="effective population size")
 parser.add_argument("--data_matched", type=str, nargs=3, default=["", ""], help="input the path to means + missingness .txt files + sampling .table, will override -g, -ic, -ns and -st to initialize and sample according to the table")
 parser.add_argument("--seed", type=int, default=5, help="seed")
 parser.add_argument("--save_plots", action="store_true", help="save plots of all of the replicate trajectories")
 parser.add_argument("--small_s", action="store_true", help="whether or not to use the small s approximation in the WF update")
 parser.add_argument("--suffix", type=str, default="", help="file names suffix to differentiate")
 args = parser.parse_args()
+
+if args.Ne is not None:
+    ne_spec = True
+else:
+    ne_spec = False
+    args.Ne = Ne_default
+
+if args.num_samples is not None:
+    ns_spec = True
+else:
+    ns_spec = False
+    args.num_samples = ns_default
+
+if args.sampling_times is not None:
+    st_spec = True
+else:
+    st_spec = False
+    args.sampling_times = st_default
 
 args_dict = {}
 args_dict["s_list"] = args.sel_coeffs
@@ -81,11 +99,11 @@ for sel_str, sel_type, init_dist, num_gens in itprod(args_dict["s_list"], args_d
     if sel_type != "neutral":
         pdict["sel_str"] = sel_str
     if args.data_matched[0] == "":
-        if pd["Ne"] != Ne_default or 'param_variation' in args.output_directory.name:
+        if ne_spec:
             pdict["Ne"] = pd["Ne"]
-        if pd["num_samples"] != ns_default or 'param_variation' in args.output_directory.name:
+        if ns_spec:
             pdict["num_samples"] = pd["num_samples"]
-        if pd["sample_times"] != st_default or 'param_variation' in args.output_directory.name:
+        if st_spec:
             pdict["sample_times"] = pd["sample_times"]
     pdict["init_dist"] = init_dist
 
