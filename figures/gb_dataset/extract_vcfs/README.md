@@ -26,7 +26,10 @@ Lastly, the scripts create the output files in a subdirectory named `extracted/`
 
 The scripts require that the programs `python` and `vcftools` are available to be called from the command line. Optionally, if you want to perform PCA, the tools `convertf` and `smartpca` from the `eigensoft` software suite need to be available. In addition, the python packages `pandas`, `numpy`, `collections`, `pathlib2`, `subprocess`, `matplotlib` (only for plotting), and `cartopy` (only for map-plot) need to be available.
 
-All scripts define several global variables at the beginning of the files, that can be used to customize input and output.
+All scripts define several global variables at the beginning of the files, that can be used to customize input and output. Also, if you have not already, install the additional plotting packages required by running the command
+```
+pip install "emsel[plots] @ git+https://github.com/steinrue/EMSel"
+```
 
 #### 1. Extract annotation (required)
 

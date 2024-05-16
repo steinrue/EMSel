@@ -1,6 +1,11 @@
-# Recreating figures in the manuscript
+# Recreating main text figures
 
 This directory contains scripts to recreate the data-derived figures in the main text and Supplementary Material of Fine and Steinrücken (2024), or generate similar plots for a dataset of your choosing. Step-by-step instructions to generate each plot can be found in the README of each subfolder.
+
+To run the figures scripts, additional packages are needed - they can be installed by running the command
+```
+pip install "emsel[plots] @ git+https://github.com/steinrue/EMSel"
+```
 
 ## simulation subdirectory
 

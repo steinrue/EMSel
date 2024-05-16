@@ -3,7 +3,7 @@ from matplotlib.patches import Rectangle
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import classify_full_run, get_one_count_matrix, params_dict_to_str, get_llg_array, get_lr_statistic, get_llgka_array, full_bh_procedure, convert_from_abbrevs, convert_to_abbrevs, plot_qq
+from emsel.emsel_util import classify_full_run, get_one_count_matrix, params_dict_to_str, get_llg_array, get_lr_statistic, get_llgka_array, full_bh_procedure, convert_from_abbrevs, convert_to_abbrevs, plot_qq
 from copy import deepcopy
 from scipy.stats import chi2, gengamma
 from pandas import DataFrame
@@ -83,7 +83,7 @@ for num_gens in num_gens_list:
                 pdict["sel_type"] = sel_type
                 pdict["sel_str"] = sel_str
                 exp_name = params_dict_to_str(**pdict)
-                onep_path = Path(f"{exp_name}_EM.pkl")
+                onep_path = Path(f"{EM_dir}/{exp_name}_EM.pkl")
                 if sel_type == "under" and not onep_path.is_file():
                     final_sel_types = ["add", "dom", "rec", "over"]
                     continue
@@ -154,7 +154,7 @@ for num_gens in num_gens_list:
 
         indices = [f"Neutral"]
         if save_bh:
-            tpath = Path(f"{row_list[0][0]}_classified.pkl")
+            tpath = Path(f"{classified_dir}/{row_list[0][0]}_classified.pkl")
             bh_dict = {
                 "bh_classes": test_vals[0],
                 "p_vals": g_p_val_matrix[0],

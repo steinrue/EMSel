@@ -1,5 +1,5 @@
 import numpy as np
-from emsel_util import vcf_to_useful_format
+from emsel.emsel_util import vcf_to_useful_format
 import allel
 from pandas import read_csv
 from tqdm import tqdm

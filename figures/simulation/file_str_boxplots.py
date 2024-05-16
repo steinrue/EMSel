@@ -6,7 +6,7 @@ from pathlib import Path
 import seaborn as sns
 import pandas as pd
 from cycler import cycler
-from emsel_util import params_dict_to_str, get_1d_s_data_from_type, convert_from_abbrevs
+from emsel.emsel_util import params_dict_to_str, get_1d_s_data_from_type, convert_from_abbrevs
 
 ####### MODIFY
 
@@ -19,6 +19,7 @@ EM_dir = "EM"
 output_dir = "output"
 
 file_strs = ["Ne5000_", "", "Ne20000_"]
+blank_name_str = "Ne10000_"
 
 ####### DO NOT MODIFY
 
@@ -162,7 +163,7 @@ for file_i, file_str in enumerate(file_strs):
         axs.axhline(sel_str, color="r", alpha=.6, ls="--", lw=.5)
     legend_loc = "upper left"
     axs.text(-.24, 1.01, rf"$\bf{{{chr(ord('A')+file_i)}}}$", fontsize=13, transform=axs.transAxes)
-    axs.legend(loc=legend_loc, fontsize=7, labelspacing=.2, handlelength=1.5, handleheight=.5, handletextpad=.4, borderpad=.2, borderaxespad=.2, markerscale=.25 if cond_only else 1)
+    axs.legend(loc=legend_loc, fontsize=7, labelspacing=.2, handlelength=1.5, handleheight=.5, handletextpad=.4, borderpad=.2, borderaxespad=.2, markerscale=1)
     axs.set_ylim([min_quantile, max_quantile])
-    plt.savefig(f"{output_dir}/{file_str}_boxplots.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{output_dir}/{file_str if file_str != '' else blank_name_str}boxplots.pdf", format="pdf", bbox_inches="tight")
     plt.close(fig)

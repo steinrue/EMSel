@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import bh_correct, extendedFisher, windowMatrix, convert_from_abbrevs, plot_qq
+from emsel.emsel_util import bh_correct, extendedFisher, windowMatrix, convert_from_abbrevs, plot_qq
 import pandas as pd
 
 ###### MODIFY
@@ -16,7 +16,7 @@ classification_types = ["add", "dom", "rec", "het"]
 ###### DO NOT MODIFY
 
 def combine_pos(row):
-    return f"{row['Left pos.']:,d}-{row['Right pos.']:,d}"
+    return f"{int(row['Left pos.']):,d}-{int(row['Right pos.']):,d}"
 
 plt.rcParams.update({'font.size': 9,
                      'text.usetex': False,
@@ -54,7 +54,6 @@ for c_type in classification_types:
     brown_p = np.concatenate((np.zeros(26), brown_p, np.zeros(25)))
     bp_bh = -np.log10(bh_correct(np.power(10, -brown_p), alpha)[0])
     brown_p_sig_idx = np.where(brown_p > bp_bh)[0]
-    p_bonferroni = .05/brown_p.shape[0]
     brown_diffs = np.diff(brown_p_sig_idx)
     brown_window_boundaries = np.concatenate(([0], np.where(brown_diffs>1)[0]))
     brown_p_windows = []
@@ -131,11 +130,9 @@ for c_type in classification_types:
         sw_lpos.append(lpos)
         sw_rpos.append(rpos)
         window_p_vals = cdata["all_p"][f"{c_type}_p"][full_window]
-        print(window_p_vals)
         sw_pmax.append(max(window_p_vals))
         window_argmax = np.argmax(window_p_vals)
         sw_idxmax.append(full_window[window_argmax])
-
         sw_argpmax.append(cdata["all_loc_per_chrom"][full_window[window_argmax]])
         sw_rsidmax.append(cdata["all_rsid"][full_window[window_argmax]])
         sw_ref.append(cdata["all_ref_allele"][full_window[window_argmax]])
@@ -149,17 +146,26 @@ for c_type in classification_types:
         sw_chrs.append(sw_chrom)
         sw_nums.append(len(sig_window))
         raw_mask = ((snp_df["snp_chr"]==cdata["all_chrom"][sig_window[0]]) & (snp_df["snp_pos"]>=lpos) & (snp_df["snp_pos"]<=rpos))
-        sw_raw_snps.append(snp_df["snp_idx"][raw_mask].tolist())
+        raw_snps = snp_df["snp_idx"][raw_mask].tolist()
+        sw_raw_snps.append(", ".join(str(x) for x in raw_snps))
         sw_raw_nums.append(raw_mask.sum())
-        sw_snps.append(sig_window)
+        sw_snps.append(", ".join(str(x) for x in sig_window))
         sw_type.append(c_type)
         sw_chridxmaxs.append(full_window[window_argmax]-cdata["all_loc"][f"chr_{sw_chrom}_idx_offset"])
         sw_genes.append("TBD")
     if len(sw_lpos) > 0:
-        sw_array = np.array([sw_type, sw_chrs, sw_lpos, sw_rpos, sw_raw_nums, sw_nums, sw_pmax, sw_spmax, sw_llmax, sw_idxmax, sw_argpmax, sw_rsidmax, sw_ref, sw_alt, sw_raw_snps, sw_snps, sw_chridxmaxs, sw_genes]).T
+        sw_array = np.array([sw_type, sw_chrs, sw_lpos, sw_rpos, sw_raw_nums, sw_nums, sw_pmax, sw_spmax, sw_llmax,
+                             sw_idxmax, sw_argpmax, sw_rsidmax, sw_ref, sw_alt, sw_raw_snps, sw_snps, sw_chridxmaxs, sw_genes]).T
         brown_windows = pd.DataFrame(sw_array, columns=["Sel. type", "Chr.", "Left pos.", "Right pos.", "Raw", "Post", r"$-\log_{10}p_{min}", r"$\hat{s}(p_{min})", r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.", "Lead SNP", "Ref.", "Alt.", "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr).", "Gene(s)"])
         brown_windows["Genomic region (hg19)"] = brown_windows.apply(combine_pos, axis=1)
-        brown_windows.to_latex(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.tex", float_format="%.2f", columns=[["Chr.", "Genomic region (hg19)", "Gene(s)", "Lead SNP", "Ref.", "Alt.", "Raw", "Post", r"$-\log_{10}p_{min}", r"$\hat{s}(p_{min})"]], index=False, column_format="cccccccccc")
+        brown_windows = brown_windows[["Sel. type", "Chr.", "Genomic region (hg19)", "Gene(s)", "Lead SNP", "Ref.", "Alt.",
+             "Raw", "Post", r"$-\log_{10}p_{min}", r"$\hat{s}(p_{min})",
+             r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.",
+             "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr)."]]
+        brown_windows.to_latex(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.tex", float_format="%.2f",
+                               columns=["Chr.", "Genomic region (hg19)", "Gene(s)", "Lead SNP", "Ref.", "Alt.",
+                                         "Raw", "Post", r"$-\log_{10}p_{min}", r"$\hat{s}(p_{min})"],
+                               index=False, column_format="cccccccccc")
 
         with open(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.pkl", "wb") as file:
             pickle.dump(brown_windows, file)

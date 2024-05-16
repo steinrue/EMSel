@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import bh_correct, get_1d_s_data_from_type, get_llg_array, get_llgka_array, full_bh_procedure, classify_full_run
+from emsel.emsel_util import bh_correct, get_1d_s_data_from_type, get_llg_array, get_llgka_array, full_bh_procedure, classify_full_run
 
 ###### MODIFY
 
@@ -22,7 +22,7 @@ binned_path = Path(f"{data_dir}/GB_v54.1_{genodata_type}_complete_data_binned.cs
 complete_agg_data_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_agg_data.pkl")
 means_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_means.txt")
 missingness_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_missingness.txt")
-gengamma_path = Path(f"{output_dir}/gengamma_params.pkl")
+gengamma_path = Path(f"{data_dir}/gengamma_params.pkl")
 for chrom in chroms:
     base_data_path = Path(f"{data_dir}/GB_v54.1_{genodata_type}_c{chrom}")
 

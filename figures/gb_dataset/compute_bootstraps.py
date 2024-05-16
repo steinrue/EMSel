@@ -1,7 +1,7 @@
 import numpy as np
 import pickle
 from pathlib import Path
-from emsel_util import get_1d_s_data_from_type
+from emsel.emsel_util import get_1d_s_data_from_type
 import matplotlib.pyplot as plt
 ###### MODIFY
 

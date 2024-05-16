@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import params_dict_to_str, bh_correct, get_roc_and_auc, convert_from_abbrevs, plot_qq
+from emsel.emsel_util import params_dict_to_str, bh_correct, get_roc_and_auc, convert_from_abbrevs, plot_qq
 from copy import deepcopy
 from scipy.stats import chi2, gengamma
 from pandas import DataFrame

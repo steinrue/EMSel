@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import plot_qq
+from emsel.emsel_util import plot_qq
 from scipy.stats import chi2
 
 ###### MODIFY

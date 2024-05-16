@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 import pickle
 from scipy.stats import chi2
-from emsel_util import bh_correct, get_1d_s_data_from_type
+from emsel.emsel_util import bh_correct, get_1d_s_data_from_type
 
 ###### MODIFY
 
@@ -51,11 +51,10 @@ missingness_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_missingness.txt"
 for chrom in chroms:
     agg_data = {}
     base_data_path = Path(f"{data_dir}/GB_v54.1_{genodata_type}_c{chrom}")
-    df = np.loadtxt(base_data_path.with_suffix(".csv"), delimiter="\t")
+    df = np.loadtxt(base_data_path.with_suffix(base_data_path.suffix+".csv"), delimiter="\t")
     final_data = df[:, 2::3].astype(int)
     num_samples = df[:, 1::3].astype(int)
     sample_times = df[:, ::3].astype(int)
-    print(np.max(sample_times))
 
     #aggregating various things
     em_path = Path(f"{EM_dir}/GB_v54.1_{genodata_type}_c{chrom}_EM.pkl")
@@ -184,5 +183,5 @@ superfinal_binned_data = superfinal_binned_data[1:, :]
 np.savetxt(binned_path, superfinal_binned_data, delimiter="\t", fmt="%d",
            header="Each row = one replicate; each set of three columns = (sampling time, total samples, derived alleles)")
 
-np.savetxt(means_path, np.concatenate(([MAF_THRESH], cdata["all_means"])), delimiter="\n", fmt="%.4f")
-np.savetxt(missingness_path, np.concatenate(([MISSING_THRESH], cdata["all_missingness"])), delimiter="\n", fmt="%.4f")
+np.savetxt(means_path, np.concatenate(([MAF_THRESH], cdata["all_means"])), delimiter="\t", fmt="%.4f")
+np.savetxt(missingness_path, np.concatenate(([MISSING_THRESH], cdata["all_missingness"])), delimiter="\t", fmt="%.4f")

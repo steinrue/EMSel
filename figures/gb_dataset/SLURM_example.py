@@ -4,7 +4,7 @@ import pathlib
 genodata_type = "capture_only"
 max_run_hours = 10
 num_cores = 30
-hmm_script = pathlib.Path('../../run_emsel.py')
+hmm_script = pathlib.Path('../../src/emsel/run_emsel.py')
 output_dir = pathlib.Path('output')
 data_dir = pathlib.Path('data')
 

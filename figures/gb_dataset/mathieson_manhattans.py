@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import pickle
 from scipy.stats import chi2
-from emsel_util import bh_correct, extendedFisher, windowMatrix
+from emsel.emsel_util import bh_correct, extendedFisher, windowMatrix
 
 ###### MODIFY
 output_dir = "output"

@@ -6,7 +6,7 @@ from pathlib import Path
 import seaborn as sns
 import pandas as pd
 from cycler import cycler
-from emsel_util import params_dict_to_str, get_1d_s_data_from_type, convert_from_abbrevs
+from emsel.emsel_util import params_dict_to_str, get_1d_s_data_from_type, convert_from_abbrevs
 
 ####### MODIFY
 
@@ -81,7 +81,6 @@ for n_i, num_gens in enumerate(num_gens_list):
 
             hmm_filename = Path(f"{EM_dir}/{exp_name}_EM.pkl")
             pd_filename = Path(f"{data_dir}/{exp_name}_data.csv")
-            pdata_filename = Path(f"{data_dir}/{exp_name}_pd.pkl")
             bh_filename = Path(f"{classified_dir}/{exp_name}_classified.pkl")
 
             if not pd_filename.is_file():
@@ -99,9 +98,6 @@ for n_i, num_gens in enumerate(num_gens_list):
                 hf = pickle.load(file)
 
             pf = np.loadtxt(pd_filename, delimiter="\t")
-
-            with open(pdata_filename, "rb") as file:
-                pdict = pickle.load(file)
 
             num_pts = hf["neutral_ll"].shape[0]
             if cond_only:

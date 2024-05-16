@@ -1,7 +1,7 @@
 import pickle
 import matplotlib.pyplot as plt
 from pathlib import Path
-from emsel_util import params_dict_to_str, convert_from_abbrevs
+from emsel.emsel_util import params_dict_to_str, convert_from_abbrevs
 from cycler import cycler
 from copy import deepcopy
 import pandas as pd
@@ -84,7 +84,7 @@ for v_i, var_list in enumerate(parameter_lists):
         axs[v_i//2, v_i%2].set_ylabel(r"$\hat{s}$")
     else:
         axs[v_i//2, v_i%2].set_ylabel("")
-    axs[v_i//2, v_i%2].text(-.2, .97, rf"$\bf{subfig_names[v_i]}$", fontsize=13, transform=axs[v_i//2, v_i%2].transAxes)
+    axs[v_i//2, v_i%2].text(-.2, .97, rf"$\bf{{{subfig_names[v_i]}}}$", fontsize=13, transform=axs[v_i//2, v_i%2].transAxes)
     axs[v_i//2, v_i%2].axhline(sel_str, color="r", ls="--")
     axs[v_i//2, v_i%2].legend(fontsize=7, labelspacing=.2, handlelength=1.5, handleheight=.5, handletextpad=.4,
                                   borderpad=.2, borderaxespad=.2, markerscale=.25)

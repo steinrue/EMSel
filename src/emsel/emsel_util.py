@@ -65,7 +65,8 @@ def forward_one_gen(p_vector, pop_size, s1, s2, rng, small_s=False):
         p_prime_vector = p_vector + p_vector * (1 - p_vector) * ((1 - 2 * p_vector) * s1 + p_vector * s2)
     else:
         p_prime_vector = p_vector*(1+s1-s1*p_vector+s2*p_vector)/(1+2*s1*p_vector+s2*p_vector**2-2*s1*p_vector**2)
-    return rng.binomial(2*pop_size, p_prime_vector) / (2*pop_size)
+
+    return rng.binomial(pop_size, p_prime_vector) / pop_size
 
 
 def generate_data(pd):
@@ -103,20 +104,18 @@ def generate_data(pd):
         else:
             print("weird IC")
             p = pd["p_init"]
-
         # print(trial_num)
         temp_samples, temp_true_data = generate_multiple_wf_data(p, 2*pd["Ne"], nt, pd["s1_true"], pd["s2_true"],
                                                            pd["num_gens"], sample_locs, pd["seed"] + trial_num, small_s=pd["small_s"])
         if pd["survive_only"]:
             if "sampling_matrix" in pd:
                 if "missingness_array" in pd:
-                    print(f"pre-missingness adjustment: {np.mean(temp_samples):.4f} avg samples")
                     outer_rng = np.random.default_rng(pd["seed"]+trial_num)
                     missingness_vals = outer_rng.choice(pd["missingness_array"][1:], size=temp_samples.shape[0], replace=True)
                     hits_missing = outer_rng.binomial(temp_samples, 1 - missingness_vals[:, np.newaxis],size=temp_samples.shape)
                     misses_missing = outer_rng.binomial(nt - temp_samples,1 - missingness_vals[:, np.newaxis],size=temp_samples.shape)
                     assert np.all(hits_missing + misses_missing <= nt)
-                    print(f"post-missingness adjustment: {np.mean(hits_missing):.4f} avg samples")
+                    print(f"Pre-missingness: {np.mean(temp_samples):.4f} avg. samples. Post: {np.mean(hits_missing):.4f}")
 
                     temp_nts = hits_missing + misses_missing
                     temp_samples_ms = hits_missing
@@ -394,7 +393,6 @@ def full_bh_procedure(llgka_list, fitted_dist, lr_shift, alpha, bh=True):
 
 def bh_correct(p_values, alpha, yekutieli=False):
     M = p_values.shape[0]
-    print(M)
     p_values_sorted = np.sort(p_values.copy())
     bh_range = np.arange(1,M+1)
     if yekutieli:
@@ -406,9 +404,6 @@ def bh_correct(p_values, alpha, yekutieli=False):
         print("no significant ps here!")
         return 1, np.array([])
     p_k = np.sqrt(p_values_sorted[k_max]* p_values_sorted[k_max+1])
-    plt.plot(bh_range, bh_range*alpha/M)
-    plt.plot(bh_range, p_values_sorted)
-    plt.show()
     return p_k, np.where(p_values <= p_k)[0]
 
 def get_llg_array(one_data_dict, onep_types, full_classified_array):

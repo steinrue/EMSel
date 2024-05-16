@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm, binom, beta
 from scipy.optimize import fsolve
-from emsel_util import get_uq_a_exps, generate_states_new
+from emsel.emsel_util import get_uq_a_exps, generate_states_new
 from sympy import symbols, sympify, lambdify, diff
 from numba import njit
 from scipy.optimize import minimize as spoptmin

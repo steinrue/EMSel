@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel_util import params_dict_to_str, get_roc_and_auc, convert_from_abbrevs, plot_qq
+from emsel.emsel_util import params_dict_to_str, get_roc_and_auc, convert_from_abbrevs, plot_qq
 from copy import deepcopy
 from scipy.stats import chi2
 from pandas import DataFrame
@@ -97,7 +97,6 @@ for num_gens in num_gens_list:
                             sf = pickle.load(file)
                         sf_run_ll = sf[f"{run_EM_str}_run"]["ll_final"]
                         sf_llr = 2*(sf_run_ll-sf["neutral_ll"])
-                        print(f"{nn_fname} {run_type} stats: {np.min(sf_llr):.4f} {(sf_llr < 0).sum()}")
                     nn_llr = sf_llr
                     nn_p_vals = -chisq_dist.logsf(nn_llr)/np.log(10)
                     roc_FPR, roc_TPR, auc = get_roc_and_auc(np.power(10, -full_p_vals), np.power(10, -nn_p_vals))
