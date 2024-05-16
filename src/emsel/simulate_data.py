@@ -1,5 +1,5 @@
 import numpy as np
-from emsel_util import params_dict_to_str, generate_data, get_sel_coeffs_from_type
+from emsel.emsel_util import params_dict_to_str, generate_data, get_sel_coeffs_from_type
 import pickle
 import matplotlib.pyplot as plt
 from pathlib import Path
