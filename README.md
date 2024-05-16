@@ -7,7 +7,7 @@ The subdirectory [figures/](figures/) contains all code to compile the data and 
 
 ## Installation
 
-To install EMSel, run the `pip` command
+To install EMSel, run the following `pip` command on the unix command-line:
 ```
 pip install "emsel @ git+https://github.com/steinrue/EMSel"
 ```
