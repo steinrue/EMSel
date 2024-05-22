@@ -95,7 +95,7 @@ for file_i, file_str in enumerate(file_strs):
         with open(pdata_filename, "rb") as file:
             pdict = pickle.load(file)
 
-        num_pts = hf["neutral_ll"].shape[0]
+        num_pts = hf["samples_mask"].sum()
         idx_list = np.arange(num_pts)
         if sel_type == "neutral":
             for run_type in run_types:

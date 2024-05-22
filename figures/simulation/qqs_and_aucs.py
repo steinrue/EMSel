@@ -107,7 +107,8 @@ for num_gens in num_gens_list:
                     continue
                 logps.append(full_p_vals)
                 labels.append(convert_from_abbrevs(run_EM_str, shorthet=True))
-            plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=True)
+            thinning = init_dist == "real_special"
+            plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning)
             fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_llr_all.pdf"), format="pdf", bbox_inches="tight")
             plt.close(fig)
 

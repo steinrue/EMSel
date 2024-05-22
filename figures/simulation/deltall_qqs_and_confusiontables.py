@@ -244,6 +244,7 @@ for num_gens in num_gens_list:
         colors = [colorlist[2], "#861A5E", colorlist[0]]
         axins = axs.inset_axes([.65, .11, .3, .3])
         axs.text(-.2, .97, r"$\bf{D}$", fontsize=13, transform=axs.transAxes)
-        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=True)
+        thinning = init_dist == "real_special"
+        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=thinning)
         fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_dll_all.pdf"), format="pdf", bbox_inches="tight")
         plt.close(fig)

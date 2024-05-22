@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 data_dir = "data/bootstrap"
 EM_dir = "EM/bootstrap"
-output_dir = "output"
+output_dir = "output/bootstrap"
 genodata_type = "capture_only"
 
 ###### DO NOT MODIFY
@@ -23,18 +23,19 @@ for sel_type in c_types:
     meds = []
     sds = []
     for fstr in Path(f"{EM_dir}").iterdir():
-        if sel_type in fstr.stem:
-            with open(fstr, "rb") as file:
-                temp_hf = pickle.load(file)
-            with open(f"{data_dir}/{fstr.stem[:-3]}_bootstrap_pd.pkl", "rb") as file:
-                temp_pd = pickle.load(file)
-            true_vals.append(temp_pd["s2_true"] if sel_type != "het" else temp_pd["s1_true"])
-            s_data = get_1d_s_data_from_type(temp_hf[f'{sel_type}_run']["s_final"], sel_type)
-            s_sets.append(s_data)
-            meds.append(np.median(s_data))
-            low_ivl.append(np.quantile(s_data, .025))
-            high_ivl.append(np.quantile(s_data, .975))
-            rsids.append(fstr.stem.split("_")[0])
+        if fstr.suffix == ".pkl":
+            if sel_type in fstr.stem:
+                with open(fstr, "rb") as file:
+                    temp_hf = pickle.load(file)
+                with open(f"{data_dir}/{fstr.stem[:-3]}_bootstrap_pd.pkl", "rb") as file:
+                    temp_pd = pickle.load(file)
+                true_vals.append(temp_pd["s2_true"] if sel_type != "het" else temp_pd["s1_true"])
+                s_data = get_1d_s_data_from_type(temp_hf[f'{sel_type}_run']["s_final"], sel_type)
+                s_sets.append(s_data)
+                meds.append(np.median(s_data))
+                low_ivl.append(np.quantile(s_data, .025))
+                high_ivl.append(np.quantile(s_data, .975))
+                rsids.append(fstr.stem.split("_")[0])
 
     meds = np.array(meds)
     low_ivl = np.array(low_ivl)

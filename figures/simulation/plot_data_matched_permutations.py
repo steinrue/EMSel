@@ -44,7 +44,7 @@ logps = []
 labels = []
 for perm_i in range(100):
     neutral_hmm_path = Path(f"{EM_dir}/{neutral_filename}_perm{perm_i}_EM.pkl")
-    with open(neutral_hmm_path) as file:
+    with open(neutral_hmm_path, "rb") as file:
         nf = pickle.load(file)
     neutral_ll = nf["neutral_ll"]
     run_ll = nf[f"add_run"]["ll_final"]
@@ -55,7 +55,7 @@ for perm_i in range(100):
     labels.append("")
 
 true_neutral_path = Path(f"{EM_dir}/{neutral_filename}_EM.pkl")
-with open(true_neutral_path) as file:
+with open(true_neutral_path, "rb") as file:
     nf = pickle.load(file)
 neutral_ll = nf["neutral_ll"]
 run_ll = nf[f"add_run"]["ll_final"]

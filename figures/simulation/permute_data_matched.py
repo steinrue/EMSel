@@ -1,5 +1,6 @@
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 
 
 ####### MODIFY
@@ -12,7 +13,7 @@ df = np.loadtxt(df_path, delimiter="\t")
 final_data = df[:, 2::3].astype(int)
 num_samples = df[:, 1::3].astype(int)
 sample_times = (df[:, ::3]).astype(int)
-for i in range(100):
+for i in tqdm(range(100)):
     rng = np.random.default_rng(i)
     new_final_data = np.zeros_like(final_data)
     alt_df_path = Path(f"{data_dir}/neutral_g125_dal_special_perm{i}_data.csv")

@@ -283,8 +283,8 @@ def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", th
 
     handles, labels = axins.get_legend_handles_labels()
     axs.legend(handles, labels, loc=legend_loc)
-    axs.set_xlabel("$\mathbb{E}(-\log_{10}(p))$")
-    axs.set_ylabel("$-\log_{10}(p)$")
+    axs.set_xlabel(r"$\mathbb{E}(-\log_{10}(p))$")
+    axs.set_ylabel(r"$-\log_{10}(p)$")
     axs.set_ylim([0, max_y * 1.05])
     axs.set_xlim([0, max_y * 1.05])
 
@@ -633,14 +633,25 @@ def windowMatrix (values, halfWindowSize=25):
     return extendedData
 
 def save_csv_output(hmm_dict, hmm_path):
-    num_reps = hmm_dict["neutral_ll"].shape[0]
-    info_array = np.zeros((num_reps, 2+3*(len(hmm_dict["selection_modes"])-1)), dtype=float)
-    info_array[:, 0] = hmm_dict["samples_idxs"]
-    info_array[:, 1] = hmm_dict["neutral_ll"].flatten()
-    cols = ["unfiltered index", "neutral_ll"]
-    for ud_i, ud_type in enumerate(hmm_dict["selection_modes"][1:], start=1):
-        info_array[:, 3*ud_i-1] = hmm_dict[f"{ud_type}_run"]["ll_final"].flatten()
-        info_array[:, 3*ud_i:3*(ud_i+1)-1] = hmm_dict[f"{ud_type}_run"]["s_final"].T
-        cols.extend([f"{ud_type}_ll", f"{ud_type}_s1", f"{ud_type}_s2"])
+    if hmm_dict["selection_modes"][0] == "neutral":
+        num_reps = hmm_dict["neutral_ll"].shape[0]
+        info_array = np.zeros((num_reps, 2+3*(len(hmm_dict["selection_modes"])-1)), dtype=float)
+        info_array[:, 0] = hmm_dict["samples_idxs"]
+        info_array[:, 1] = hmm_dict["neutral_ll"].flatten()
+        cols = ["unfiltered index", "neutral_ll"]
+        for ud_i, ud_type in enumerate(hmm_dict["selection_modes"][1:], start=1):
+            info_array[:, 3*ud_i-1] = hmm_dict[f"{ud_type}_run"]["ll_final"].flatten()
+            info_array[:, 3*ud_i:3*(ud_i+1)-1] = hmm_dict[f"{ud_type}_run"]["s_final"].T
+            cols.extend([f"{ud_type}_ll", f"{ud_type}_s1", f"{ud_type}_s2"])
+    else:
+        mode_1 = hmm_dict["selection_modes"][0]
+        num_reps = hmm_dict[f"{mode_1}_run"]["ll_final"].shape[0]
+        info_array = np.zeros((num_reps, 1+3*len(hmm_dict["selection_modes"])),dtype=float)
+        info_array[:, 0] = hmm_dict["samples_idxs"]
+        cols = ["unfiltered_index"]
+        for ud_i, ud_type in enumerate(hmm_dict["selection_modes"]):
+            info_array[:, 3*ud_i+1] = hmm_dict[f"{ud_type}_run"]["ll_final"].flatten()
+            info_array[:,3*ud_i+2:3*(ud_i+1)+1] = hmm_dict[f"{ud_type}_run"]["s_final"].T
+            cols.extend([f"{ud_type}_ll", f"{ud_type}_s1", f"{ud_type}_s2"])
     info_df = pd.DataFrame(info_array, columns=cols)
     info_df.to_csv(hmm_path, index=False)

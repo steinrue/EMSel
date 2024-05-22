@@ -28,7 +28,7 @@ def main():
     parser.add_argument("-maf", "--min_allele_freq", type=float, default=0.05, help="filters out replicates with mean minor allele frequency < MAF")
     parser.add_argument("--min_sample_density", type=float, default=0.1, help="filters out replicates with fewer than (min_sample_density * max_samples) total samples")
     parser.add_argument("-nc", "--num_cores", type=int, default=1, help="number of CPU cores to parallelize over")
-    parser.add_argument("-ns", "--num_states", type=int, help="number of approx states in HMM", default=500)
+    parser.add_argument("-hs", "--hidden_states", type=int, help="number of approx states in HMM", default=500)
     parser.add_argument("--s_init", type=float, nargs=2, default=[0., 0.], help="vector of initial s value")
     parser.add_argument("-sid", "--starting_init_dist", default="uniform", help="initial initial condition to use")
     parser.add_argument("--sid_dict", nargs='*', help="initial condition dictionary")
@@ -50,7 +50,7 @@ def main():
     args = parser.parse_args()
 
     hmm_dd = {}
-    hmm_dd["approx_states"] = args.num_states
+    hmm_dd["approx_states"] = args.hidden_states
     hmm_dd["s_init"] = args.s_init
     hmm_dd["init_cond"] = args.starting_init_dist
     hmm_dd["tol"] = args.tol
@@ -148,6 +148,8 @@ def main():
             raise ValueError("Invalid update type specified!")
         if "neutral" not in hmm_dd["selection_modes"] and not args.no_neutral:
             hmm_dd["selection_modes"] = ["neutral", *hmm_dd["selection_modes"]]
+        if "neutral" in hmm_dd["selection_modes"] and hmm_dd["selection_modes"][0] != "neutral":
+            hmm_dd["selection_modes"].insert(0,hmm_dd["selection_modes"].pop(hmm_dd["selection_modes"].index("neutral")))
         selection_modes = hmm_dd["selection_modes"]
     for selmode_i, sel_type in enumerate(selection_modes):
         print(f"Now analyzing: {sel_type}!")
@@ -161,10 +163,17 @@ def main():
                 iter_hmm.init_update_type = hmm_dd["ic_update_type"]
                 iter_hmm.init_update_func, iter_hmm.init_params_to_state_func, iter_hmm.init_update_size = iter_hmm.get_init_update_func(hmm_dd["ic_update_type"])
                 res = parallel(delayed(run_one_s)(iter_hmm, hmm_data["final_data"][i], hmm_data["num_samples"][i], hmm_data["sample_times"][i], i, hmm_dd["tol"], hmm_dd["max_iter"], hmm_dd["min_init_val"], hmm_dd["min_ic"]) for i in parallel_loop)
+
+            #silly fix for SLURM issues
+            true_rp3 = [rp[3] for rp in res]
+            for r_i, rp in enumerate(res):
+                if isinstance(rp[3], np.ndarray):
+                    if rp[3].shape == (1,):
+                        true_rp3[r_i] = rp[3][0]
             hmm_dict = {
                 "s_final": np.array([rp[1] for rp in res]).T,
                 "ll_hist": np.array([rp[2] for rp in res]).T,
-                "ic_dist": np.array([rp[3] for rp in res]).T,
+                "ic_dist": np.array([true_rp3]).T,
                 "itercount_hist": np.array([rp[4] for rp in res]),
                 "exit_codes": np.array([rp[5] for rp in res]),
             }

@@ -1,15 +1,18 @@
-import pathlib
+from pathlib import Path
 
 ###### MODIFY
-genodata_type = "capture_only"
-max_run_hours = 10
+EM_dir = Path('EM/bootstrap')
+data_dir = Path('data/bootstrap')
+genodata_type = "capture_SG"
+
+qsub_dir = Path('qsubs')
+max_run_hours = 20
 num_cores = 30
-hmm_script = pathlib.Path('../../src/emsel/run_emsel.py')
-output_dir = pathlib.Path('output')
-data_dir = pathlib.Path('data')
+mem_required = 30
+
 
 #this directory must be made beforehand
-qsub_dir = pathlib.Path('qsubs')
+
 
 ###### DO NOT MODIFY
 
@@ -21,36 +24,56 @@ def writeQsubs():
     hmm_cmds = []
 
     # get a meta file going
-    script_file = pathlib.Path("meta_real_EM.sh")
+    script_file = Path("meta_gb_EM.sh")
     with open(script_file, "w") as file:
-        for chrom in chroms:
+        for fpath in data_dir.iterdir():
+            if (genodata_type not in fpath.name and "bootstrap" not in data_dir.name) or ("binned" in fpath.name):
+                continue
             for ug_i, update_group in enumerate(new_ugs):
-                in_name = pathlib.Path(data_dir, f"GB_v54.1_{genodata_type}_c{chrom}.vcf")
-                out_name = pathlib.Path(output_dir, f"GB_v54.1_{genodata_type}_c{chrom}_EM_{ug_i+1}o{total_ugs}.pkl")
-                sbatchfile = pathlib.Path(qsub_dir, f"GB_v54.1_{genodata_type}_c{chrom}_IM_{ug_i+1}o{total_ugs}.sbatch")
-                sbatchOutFile = pathlib.Path(qsub_dir, f"GB_v54.1_{genodata_type}_c{chrom}_EM_{ug_i+1}o{total_ugs}.sout")
-                sbatchErrFile = pathlib.Path(qsub_dir, f"GB_v54.1_{genodata_type}_c{chrom}_EM_{ug_i+1}o{total_ugs}.serr")
-                # put together a nice command?
-                hmm_cmd = f"python run_EMSel.py {in_name} {out_name} time_before_present --info_file {data_dir}/GB_v54.1_capture_only_inds.table --info_cols Genetic_ID Date_mean -ytg 28.1 --save_csv --full_output --num_cores {num_cores} --update_types {' '.join(u_i for u_i in update_group)} --no_neutral"
+                if fpath.suffix == ".vcf" or fpath.suffix == ".csv":
+                    out_name = str(Path(EM_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}"))
+                    sbatchfile = Path(qsub_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}.sbatch")
+                    sbatchOutFile = Path(qsub_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}.sout")
+                    sbatchErrFile = Path(qsub_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}.serr")
+                    # put together a nice command?
+                    if fpath.suffix == ".vcf":
+                        hmm_cmd = f"emsel {fpath} {out_name} --time_before_present {'--save_csv' if ug_i == 0 else ''} --info_file {data_dir}/GB_v54.1_{genodata_type}_inds.table --info_cols Genetic_ID Date_mean -ytg 28.1 --full_output --num_cores {num_cores} --selection_modes {' '.join(u_i for u_i in update_group)} --no_neutral --progressbar"
+                    else:
+                        if ug_i > 0:
+                            continue
+                        vcf_ver = Path(fpath).with_suffix(".vcf")
+                        if vcf_ver.is_file():
+                            continue
+                        if "bootstrap" in data_dir.name:
+                            sel_type = fpath.stem.split("_")[1]
+                            hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes {sel_type} --no_neutral --progressbar"
+                        else:
+                            hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes neutral add --progressbar"
 
-                if out_name.is_file() and out_name.stat().st_size > 0:
-                    print(f"already exists: {out_name.name} {out_name.stat().st_size}")
-                    continue
-                if hmm_cmd not in hmm_cmds:
-                    # write a script for the cluster
-                    with open(sbatchfile, 'w') as qsubScriptFile:
-                        qsubScriptFile.write("#!/bin/bash\n" + \
-                                             f"#SBATCH -J {chrom}\n" + \
-                                             f"#SBATCH --time={max_run_hours}:00:00\n" + \
-                                             f"#SBATCH --cpus-per-task={num_cores}\n" + \
-                                             "#SBATCH --mem=8gb\n" + \
-                                             f"#SBATCH -o {sbatchOutFile}\n" + \
-                                             f"#SBATCH -e {sbatchErrFile}\n" + \
-                                             f"{hmm_cmd}\n")
-                    # and add to meta file
-                    file.write(f"sbatch {sbatchfile}\n")
-                    hmm_cmds.append(hmm_cmd)
+                    if Path(out_name+'.csv').is_file() and Path(out_name+".csv").stat().st_size > 0:
+                        print(f"File already exists: {out_name}! continuing.")
+                        continue
 
+                    all_path = Path(out_name.rpartition("_")[0] + ".pkl")
+                    if (all_path.is_file() and all_path.stat().st_size > 0):
+                        print(f"File already exists: {all_path.name}! continuing.")
+                        continue
+                    if hmm_cmd not in hmm_cmds:
+                        # write a script for the cluster
+                        with open(sbatchfile, 'w') as qsubScriptFile:
+                            qsubScriptFile.write("#!/bin/bash\n" + \
+                                                 f"#SBATCH -J {fpath.name.rpartition('_')[-1]}\n" + \
+                                                 f"#SBATCH --time={max_run_hours}:00:00\n" + \
+                                                 f"#SBATCH --cpus-per-task={num_cores}\n" + \
+                                                 f"#SBATCH --mem={mem_required}gb\n" + \
+                                                 f"#SBATCH -o {sbatchOutFile}\n" + \
+                                                 f"#SBATCH -e {sbatchErrFile}\n" + \
+                                                 f"{hmm_cmd}\n")
+                        # and add to meta file
+                        file.write(f"sbatch {sbatchfile}\n")
+                        print(hmm_cmd)
+                        hmm_cmds.append(hmm_cmd)
+    print(f"{len(hmm_cmds)} files to be run!")
 
 def main():
     writeQsubs()

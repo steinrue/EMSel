@@ -34,18 +34,18 @@ with open(complete_agg_data_path, "rb") as file:
     cdata = pickle.load(file)
 
 for c_type in classification_types:
-    with open(f"{output_dir}/GB_v54.1_{genodata_type}_{c_type}_brown_windows.pkl",
+    with open(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.pkl",
               "rb") as file:
         temp_windows = pickle.load(file)
         for _, tr in temp_windows.iterrows():
-            if min(np.abs(tr["idxmax"]-lead_snp_idxs)) > region_size:
-                lead_snp_idxs = np.concatenate((lead_snp_idxs, np.array([tr["idxmax"]])))
+            if min(np.abs(int(tr["SNP index of max."])-lead_snp_idxs)) > region_size:
+                lead_snp_idxs = np.concatenate((lead_snp_idxs, np.array([int(tr["SNP index of max."])])))
 lead_snp_idxs = [[lead_idx] for lead_idx in lead_snp_idxs]
 
 #additional manual additions to HYDIN
 lead_snp_idxs[-1] = [*lead_snp_idxs[-1], 635227, 635233]
 
-binned_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_complete_data_binned.csv")
+binned_path = Path(f"{data_dir}/GB_v54.1_{genodata_type}_complete_data_binned.csv")
 binned_df = np.loadtxt(binned_path, delimiter="\t")
 b_st = 4450-binned_df[:, ::3]*YEARS_PER_GEN
 b_ns = binned_df[:, 1::3]

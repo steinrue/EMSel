@@ -7,22 +7,15 @@ import matplotlib.pyplot as plt
 ###### MODIFY
 
 data_dir = "data/bootstrap"
-output_dir = "output"
+output_dir = "output/bootstrap"
 genodata_type = "capture_only"
 
 ###### DO NOT MODIFY
 
 pd = {"Ne": 10000,}
 sampling_matrix = np.loadtxt(Path(f"{data_dir.split('/')[0]}/GB_v54.1_{genodata_type}_sample_sizes.table"), skiprows=1,dtype=int)
-means_path = f"{output_dir}/GB_v54.1_{genodata_type}_means.txt"
-missingness_path = f"{output_dir}/GB_v54.1_{genodata_type}_missingness.txt"
-
-means_file = np.loadtxt(means_path, delimiter="\t")
-if means_file[0] != .05:
-    print("WARNING: first value of means file is not 0.05 - may not be a MAF filter")
-missingness_file = np.loadtxt(missingness_path, delimiter="\t")
-if missingness_file[0] != .1:
-    print("WARING: first value of missingness file is not 0.1 - may not be a missingness filter")
+missingness_file = np.array([0.1, 0])
+means_file = np.array([0.05, 0])
 sampling_matrix[:, 0] = sampling_matrix[-1, 0] - sampling_matrix[:, 0]
 sampling_matrix = np.flip(sampling_matrix, axis=0)
 num_gens = sampling_matrix[-1, 0] + 1
@@ -34,7 +27,7 @@ temp_seed = 5
 
 for sel_type in ["add", "dom", "het", "rec"]:
     temp_seed += 1
-    with open(Path(f"{output_dir}/{genodata_type}_{sel_type}_sig_windows.pkl"), "rb") as file:
+    with open(Path(f"{output_dir.split('/')[0]}/{genodata_type}_{sel_type}_sig_windows.pkl"), "rb") as file:
         lead_snps_table = pickle.load(file)
     pdict = {}
     pdict["sel_type"] = sel_type
@@ -49,7 +42,7 @@ for sel_type in ["add", "dom", "het", "rec"]:
         sample_times = df[chr_idx, ::3].astype(int)
         sampling_matrix = np.vstack((sample_times, num_samples)).T
         assert sampling_matrix[:, 1].sum() == num_samples.sum()
-        sel_str = float(lead_snp[r"$\hat{s}(p_{min})"])
+        sel_str = float(lead_snp[r"$\hat{s}(p_{min})$"])
         if sel_type == "het":
             if sel_str > 0:
                 true_sel_type = "over"
@@ -63,7 +56,14 @@ for sel_type in ["add", "dom", "het", "rec"]:
         pdict["sel_str"] = sel_str
         pdict["init_dist"] = p_init
         params_filename = Path(f"{data_dir}/{rsid}_{sel_type}_bootstrap_pd.pkl")
-        data_filename = Path(f"{data_dir}/{rsid}_{sel_type}_data.csv")
+        data_filename = Path(f"{data_dir}/{rsid}_{sel_type}.csv")
+
+
+        #HYDIN has too low initial frequency for recessive selection to work!
+        if rsid == "rs79233902" and sel_type == "rec":
+            continue
+
+        print(f"Simulating: {rsid} ({sel_type})")
 
         s1, s2 = get_sel_coeffs_from_type(true_sel_type, sel_str)
         pd["s1_true"] = s1
@@ -77,8 +77,8 @@ for sel_type in ["add", "dom", "het", "rec"]:
         pd["normal_timestep"] = 0
         pd["num_sims"] = 1000
         pd["init_cond"] = "delta"
-        pd["means_array"] = means_file
         pd["missingness_array"] = missingness_file
+        pd["means_array"] = means_file
         pd["sampling_matrix"] = sampling_matrix
         data_dict = generate_data(pd)
 

@@ -140,7 +140,7 @@ and the following optional arguments:
     computing cluster.
 
 
--ns, --num_states <int, default=500>
+-hs, --hidden_states <int, default=500>
     Number of hidden states to use in the HMM. Computing time scales as O(hidden states^3), roughly.
     Accuracy is reduced below approximately 200-250 hidden states.
 
