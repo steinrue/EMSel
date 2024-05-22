@@ -70,7 +70,12 @@ for l_i, lead_snp in enumerate(lead_snp_idxs):
             alpha=.5
         axs.plot(b_st[snp_idx], b_ff[snp_idx]/b_ns[snp_idx], color=cmap(c_i/(region_size*2+1)), ls=ls, lw=lw, zorder=zorder, alpha=alpha, label=label)
         axs.scatter(b_st[snp_idx], b_ff[snp_idx]/b_ns[snp_idx], color=cmap(c_i/(region_size*2+1)), marker="o", s=b_ns[snp_idx]*.5, alpha=alpha, zorder=zorder)
-    axstext = r"$\bf{B}$" if lead_snp != 355758 else r"$\bf{D}$"
+    if 355758 in lead_snp:
+        axstext = r"$\bf{D}$"
+    elif 250327 in lead_snp:
+        axstext = r"$\bf{C}$"
+    else:
+        axstext = r"$\bf{B}$"
     axs.text(-.2, .97, axstext,fontsize=13,transform=axs.transAxes)
     axs.legend()
     axs.set_ylim([-0.05,1.05])
