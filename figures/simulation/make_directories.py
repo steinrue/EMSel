@@ -1,0 +1,17 @@
+from pathlib import Path
+
+Path("data/pure_sim/param_variation").mkdir(parents=True, exist_ok=True)
+Path("data/pure_sim/boxplots").mkdir(parents=True, exist_ok=True)
+Path("data/ibdne/boxplots").mkdir(parents=True, exist_ok=True)
+Path("data/real_matched/boxplots").mkdir(parents=True, exist_ok=True)
+Path("data/real_matched/permutations").mkdir(parents=True, exist_ok=True)
+Path("EM/pure_sim/param_variation").mkdir(parents=True, exist_ok=True)
+Path("EM/pure_sim/boxplots").mkdir(parents=True, exist_ok=True)
+Path("EM/ibdne/boxplots").mkdir(parents=True, exist_ok=True)
+Path("EM/real_matched/boxplots").mkdir(parents=True, exist_ok=True)
+Path("EM/real_matched/permutations").mkdir(parents=True, exist_ok=True)
+Path("output/pure_sim").mkdir(parents=True, exist_ok=True)
+Path("output/ibdne").mkdir(parents=True, exist_ok=True)
+Path("output/real_matched").mkdir(parents=True, exist_ok=True)
+Path("classified").mkdir(parents=True, exist_ok=True)
+Path("qsubs").mkdir(parents=True, exist_ok=True)

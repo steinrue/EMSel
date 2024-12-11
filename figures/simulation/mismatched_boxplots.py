@@ -10,9 +10,9 @@ from emsel.emsel_util import params_dict_to_str, get_1d_s_data_from_type, conver
 
 ###### MODIFY
 
-data_dir = "data"
-EM_dir = "EM"
-output_dir = "output"
+data_dir = "data/pure_sim"
+EM_dir = "EM/pure_sim"
+output_dir = "output/pure_sim"
 
 ###### DO NOT MODIFY
 

@@ -11,12 +11,16 @@ Additionally, note that the code to recreate the figures is set up to use a SLUR
 
 ## simulation subdirectory
 
-The subdirectory [simulation/](simulation/) contains scripts to generate the boxplots, strip plots, AUC plots, Q-Q plots, and confusion matrices found in Sections 3 and 4.2 of the manuscript, as well as Figures S.1-S.11 of the Supplementary Material.
+The subdirectory [simulation/](simulation/) contains scripts to generate the boxplots, strip plots, AUC plots, Q-Q plots, and confusion matrices found in Sections 3 and 4.2 of the manuscript, as well as Figures S.1-S.10 of the Supplementary Material.
 
 Detailed descriptions on how to run the scripts can be found in the subdirectory.
 
 ## gb_dataset subdirectory
 
-The subdirectory [gb_dataset/](gb_dataset/) contains scripts to generate all plots found in Section 4.3 of the manuscript, as well as Figures S.12-S.32 and Tables S.1-S.3 of the Supplementary Material. These plots _do_ require a VCF as input. 
+The subdirectory [gb_dataset/](gb_dataset/) contains scripts to generate all plots found in Section 4.3 of the manuscript, as well as Figures S.10-S.38 and Tables S.1-S.3 of the Supplementary Material. These plots _do_ require a VCF as input. 
 
 Detailed descriptions on how to run the scripts can be found in the subdirectory.
+
+## horse_dataset subdirectory
+
+The subdirectory [horse_dataset/](horse_dataset/) contains scripts to generate Figure 15 and Table 2 of the manuscript and carry out all related analyses.

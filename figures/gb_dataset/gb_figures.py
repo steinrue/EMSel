@@ -12,6 +12,7 @@ EM_dir = "EM"
 output_dir = "output"
 genodata_type = "capture_only"
 classification_types = ["add", "dom", "rec", "het"]
+suffix = ""
 
 ###### DO NOT MODIFY
 
@@ -40,17 +41,11 @@ chroms = range(1,23)
 alpha = .05
 scatter_markersize = 2
 scatter_bh_width = .75
-complete_agg_data_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_agg_data.pkl")
+complete_agg_data_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_{suffix}agg_data.pkl")
 onep_classification_types = ["add", "dom", "rec", "het"]
 all_classification_types = ["add", "dom", "rec", "het", "full"]
 with open(complete_agg_data_path, "rb") as file:
     cdata = pickle.load(file)
-p_bhs = []
-for c_type in onep_classification_types:
-    with open(Path(f"{output_dir}/GB_v54.1_{genodata_type}_{c_type}_bh.pkl"), "rb") as file:
-        snp_df = pickle.load(file)
-    p_bhs.append(-np.log10(snp_df["p_bh"]))
-avg_bh = np.mean(p_bhs)
 all_windows = {}
 for c_type in classification_types:
     with open(Path(f"{output_dir}/GB_v54.1_{genodata_type}_{c_type}_bh.pkl"), "rb") as file:
@@ -92,10 +87,14 @@ for c_type in classification_types:
                              brown_p[v_window[0]-2:v_window[-1]+2],"^", ms=scatter_markersize, c=colorlist[1], label="Post")
             elif "full" in c_type:
                 window_mask = (snp_df["snp_idx"]>=v_window[0])&(snp_df["snp_idx"]<=v_window[-1])
+                max_loc = np.argmax(snp_df["p"][window_mask])
+                max_class = snp_df["classes"][window_mask][max_loc]
                 for c_i in range(1,len(full_labels)+1):
                     color_mask = window_mask&(snp_df["classes"]==c_i)
                     if (type_sum := color_mask.sum())>0:
                         snp_axs.plot(snp_df["snp_pos"][color_mask], snp_df["p"][color_mask], "o", ms=scatter_markersize, color=colorlist[c_i-1], label=f"{full_labels[c_i-1]} ({type_sum})")
+                    if c_i == max_class:
+                        snp_axs.plot(snp_df["snp_pos"][window_mask][max_loc], snp_df["p"][window_mask][max_loc], "*", ms=scatter_markersize*2.5, color=colorlist[c_i-1])
             snp_axs.axhline(-np.log10(snp_df["p_bh"]), color=colorlist[0], ls="--", lw=scatter_bh_width, label="Raw BH thresh.")
             if "brown" in zoomscatter_type:
                 snp_axs.axhline(bp_bh, color=colorlist[1], ls="--", lw=scatter_bh_width, label="Post BH thresh.")
@@ -129,6 +128,7 @@ for c_type in classification_types:
     sw_alt = []
     sw_chridxmaxs = []
     sw_genes = []
+    last_col_name = r"$\hat{s}(p_{min})$" if c_type != "full" else r"$\widehat{s_1, s_2}(p_{min})$"
     for sig_window in valid_windows:
         full_window = np.arange(sig_window[0], sig_window[-1]+1)
         lpos = cdata["all_loc_per_chrom"][min(sig_window)]
@@ -144,10 +144,7 @@ for c_type in classification_types:
         sw_ref.append(cdata["all_ref_allele"][full_window[window_argmax]])
         sw_alt.append(cdata["all_alt_allele"][full_window[window_argmax]])
         sw_spmax.append(cdata["all_s"][f"{c_type}_s"][full_window[np.argmax(window_p_vals)]])
-        if c_type != "full":
-            sw_llmax.append(cdata["all_ll"][f"{c_type}_ll"][full_window[np.argmax(window_p_vals)]])
-        else:
-            sw_llmax.append(0)
+        sw_llmax.append(cdata["all_ll"][f"{c_type}_ll"][full_window[np.argmax(window_p_vals)]])
         sw_chrom = int(cdata["all_chrom"][sig_window[0]])
         sw_chrs.append(sw_chrom)
         sw_nums.append(len(sig_window))
@@ -160,28 +157,31 @@ for c_type in classification_types:
         sw_chridxmaxs.append(full_window[window_argmax]-cdata["all_loc"][f"chr_{sw_chrom}_idx_offset"])
         sw_genes.append("TBD")
     if len(sw_lpos) > 0:
+        if c_type == "full":
+            sw_spmax = [f"({s_val[0]:.4f}, {s_val[1]:.4f})" for s_val in sw_spmax]
         sw_array = np.array([sw_type, sw_chrs, sw_lpos, sw_rpos, sw_raw_nums, sw_nums, sw_pmax, sw_spmax, sw_llmax,
                              sw_idxmax, sw_argpmax, sw_rsidmax, sw_ref, sw_alt, sw_raw_snps, sw_snps, sw_chridxmaxs, sw_genes]).T
-        brown_windows = pd.DataFrame(sw_array, columns=["Sel. type", "Chr.", "Left pos.", "Right pos.", "Raw", "Post", r"$-\log_{10}p_{min}$", r"$\hat{s}(p_{min})$", r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.", "Lead SNP", "Ref.", "Alt.", "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr).", "Gene(s)"])
+        brown_windows = pd.DataFrame(sw_array, columns=["Sel. type", "Chr.", "Left pos.", "Right pos.", "Raw", "Post", r"$-\log_{10}p_{min}$", last_col_name, r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.", "Lead SNP", "Ref.", "Alt.", "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr).", "Gene(s)"])
         brown_windows["Genomic region (hg19)"] = brown_windows.apply(combine_pos, axis=1)
         brown_windows[r"$-\log_{10}p_{min}$"] = brown_windows[r"$-\log_{10}p_{min}$"].astype(float)
-        brown_windows[r"$\hat{s}(p_{min})$"] = brown_windows[r"$\hat{s}(p_{min})$"].astype(float)
+        if c_type != "full":
+            brown_windows[last_col_name] = brown_windows[last_col_name].astype(float)
         brown_windows = brown_windows[["Sel. type", "Chr.", "Genomic region (hg19)", "Gene(s)", "Lead SNP", "Ref.", "Alt.",
-             "Raw", "Post", r"$-\log_{10}p_{min}$", r"$\hat{s}(p_{min})$",
+             "Raw", "Post", r"$-\log_{10}p_{min}$", last_col_name,
              r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.",
              "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr)."]]
         brown_windows.to_latex(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.tex", float_format=special_format,
                                columns=["Chr.", "Genomic region (hg19)", "Gene(s)", "Lead SNP", "Ref.", "Alt.",
-                                         "Raw", "Post", r"$-\log_{10}p_{min}$", r"$\hat{s}(p_{min})$"],
+                                         "Raw", "Post", r"$-\log_{10}p_{min}$", last_col_name],
                                index=False, column_format="cccccccccc")
 
         with open(f"{output_dir}/{genodata_type}_{c_type}_sig_windows.pkl", "wb") as file:
             pickle.dump(brown_windows, file)
 
     #manhattan plots
-    fig, axs = plt.subplots(1,1,figsize=(6.25,2.75), layout="constrained", dpi=1500)
-    axs.plot(cdata["all_loc_all_chrom"][cdata["all_chrom"]%2==1], cdata["all_p"][f"{c_type}_p"][cdata["all_chrom"]%2==1], "o", markersize=1.5, color="#888888")
-    axs.plot(cdata["all_loc_all_chrom"][cdata["all_chrom"]%2==0], cdata["all_p"][f"{c_type}_p"][cdata["all_chrom"]%2==0], "o", markersize=1.5, color="#87CFFF")
+    fig, axs = plt.subplots(1,1,figsize=(6.25,2.75), layout="constrained")
+    axs.plot(cdata["all_loc_all_chrom"][cdata["all_chrom"]%2==1], cdata["all_p"][f"{c_type}_p"][cdata["all_chrom"]%2==1], "o", markersize=1.5, color="#888888", rasterized=True)
+    axs.plot(cdata["all_loc_all_chrom"][cdata["all_chrom"]%2==0], cdata["all_p"][f"{c_type}_p"][cdata["all_chrom"]%2==0], "o", markersize=1.5, color="#87CFFF", rasterized=True)
     axs.axhline(-np.log10(snp_df["p_bh"]), ls="--", c="r", label=r"BH thresh.", lw=.75)
     axs.set_ylabel(r"$-\log_{10}(p)$")
     axs.set_xlabel("Chromosome")
@@ -193,14 +193,14 @@ for c_type in classification_types:
     axs.legend()
     axs.set_ylim([0, 18])
     axs.set_xlim([0, cdata["all_loc_all_chrom"][-1]*1.001])
-    fig.savefig(f"{output_dir}/{genodata_type}_{c_type}_manhattan.png", format="png", bbox_inches="tight")
+    fig.savefig(f"{output_dir}/{genodata_type}_{c_type}_manhattan_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=600)
     plt.close(fig)
 
 #qq plots
 if "full" in classification_types:
-    fig, axs = plt.subplots(1,1,figsize=(3.1, 3.1),layout="constrained", dpi=1500)
+    fig, axs = plt.subplots(1,1,figsize=(3.1, 3.1),layout="constrained")
     axins = axs.inset_axes([.67, .11, .28, .28])
     logps = [cdata['all_p'][f'{ctype}_p'] for ctype in all_classification_types]
     labels = convert_from_abbrevs(all_classification_types, shorthet=True)
-    plot_qq(axs, axins, logps, labels, legend_loc="upper right", thin=True)
-    fig.savefig(f"{output_dir}/{genodata_type}_all_qqs.png", format="png", bbox_inches="tight")
+    plot_qq(axs, axins, logps, labels, legend_loc="upper right", thin=True, rasterized=True)
+    fig.savefig(f"{output_dir}/{genodata_type}_all_qqs_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=600)

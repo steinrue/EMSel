@@ -12,7 +12,7 @@ genodata_type = "capture_only"
 
 ###### DO NOT MODIFY
 
-pd = {"Ne": 10000,}
+pd = {"Ne": 9715,}
 sampling_matrix = np.loadtxt(Path(f"{data_dir.split('/')[0]}/GB_v54.1_{genodata_type}_sample_sizes.table"), skiprows=1,dtype=int)
 missingness_file = np.array([0.1, 0])
 means_file = np.array([0.05, 0])

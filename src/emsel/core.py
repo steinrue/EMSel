@@ -13,7 +13,6 @@ class HMM:
         assert num_approx >= 0
         self.ZERO_ALLELE_TOLERANCE = 0
         self.init_cond = init_cond
-        self.custom_init_cond = False
         self.N = num_approx
         self.hidden_interp = hidden_interp
         self.Ne = Ne
@@ -34,7 +33,7 @@ class HMM:
         self.a = self.calc_transition_probs_old([self.s1, self.s2])
         assert np.all(np.isclose(np.sum(self.a, axis=1), 1))
         self.a_init = self.a.copy()
-        if self.init_cond == "uniform":
+        if self.init_cond == "uniform" or self.init_cond == "data_mean":
             if hidden_interp == "chebyshev":
                 pre_istate = np.diff(self.bounds)
                 self.init_state = pre_istate/np.sum(pre_istate)
@@ -397,7 +396,7 @@ class HMM:
         return a_t_to_bpmf_idx, bpmf_new
 
 
-    def compute_one_s(self, loc, tol, max_iter, min_init_val=1e-8, min_ic=5):
+    def compute_one_s(self, loc, tol, max_iter, min_init_val=1e-8, min_ic=5, save_history=False):
         s_hist = np.zeros((max_iter+1, 2))
         s_hist[0, :] = (self.s1, self.s2)
         ll_hist = np.zeros(max_iter+1)
@@ -419,14 +418,14 @@ class HMM:
                     s_hist[best_idx+2:, :] = 0
                     ll_hist[best_idx+2:] = 0
                     ic_return = 12 if invalid_s_flag else 8
-                    return s_hist, [s_hist[best_idx+1, 0], s_hist[best_idx+1, 1]], ll_hist, init_params_cache[best_idx+1, :], best_idx, ic_return
+                    return s_hist if save_history else 0, [s_hist[best_idx+1, 0], s_hist[best_idx+1, 1]], ll_hist if save_history else ll_hist[ll_hist < 0][-1], init_params_cache[best_idx+1, :], best_idx, ic_return
                 elif invalid_s_flag:
-                    return s_hist, [self.s1, self.s2], ll_hist, self.init_params, itercount, 4
+                    return s_hist if save_history else 0, [self.s1, self.s2], ll_hist if save_history else ll_hist[ll_hist < 0][-1], self.init_params, itercount, 4
                 else:
-                    return s_hist, [self.s1, self.s2], ll_hist, self.init_params, itercount, 0
+                    return s_hist if save_history else 0, [self.s1, self.s2], ll_hist if save_history else ll_hist[ll_hist < 0][-1], self.init_params, itercount, 0
             if np.min(self.gammas[:, 0]) < -1e-3:
                 print(f"idx {loc} iter {itercount} parameters absurd! {s1_next:.4f} {s2_next:.4f} {np.min(self.gammas[:, 0])}. Stopping.")
-                return s_hist, [self.s1, self.s2], ll_hist, self.init_params, itercount, 1
+                return s_hist if save_history else 0, [self.s1, self.s2], ll_hist if save_history else ll_hist[ll_hist < 0][-1], self.init_params, itercount, 1
             if not self.is_valid_s(s1_next, s2_next):
                 s_hist[itercount + 1, :] = self.s1, self.s2
 
@@ -436,7 +435,7 @@ class HMM:
                     invalid_s_flag = True
                     continue
                 else:
-                    return s_hist, [self.s1, self.s2], ll_hist, self.init_params, itercount, 2
+                    return s_hist if save_history else 0, [self.s1, self.s2], ll_hist if save_history else ll_hist[ll_hist < 0][-1], self.init_params, itercount, 2
             if itercount > 1 and ll_hist[itercount] < ll_hist[itercount - 1] and ll_hist[itercount-1] < ll_hist[itercount-2]:
                 if itercount <= min_itercount:
                     first_five_stop = True
@@ -444,11 +443,11 @@ class HMM:
                     best_idx = np.argmax(ll_hist[:min_itercount])
                     s_hist[best_idx + 2:, :] = 0
                     ll_hist[best_idx + 2:] = 0
-                    return s_hist, s_hist[best_idx + 1, :], ll_hist, init_params_cache[best_idx+1, :], best_idx, 7
+                    return s_hist if save_history else 0, s_hist[best_idx + 1, :], ll_hist if save_history else ll_hist[ll_hist < 0][-1], init_params_cache[best_idx+1, :], best_idx, 7
                 else:
                     s_hist[itercount-1:, :] = 0
                     ll_hist[itercount-1:] = 0
-                    return s_hist, [s_hist[itercount-2, 0], s_hist[itercount-2, 1]], ll_hist, init_params_cache[-2, :], itercount-2, 3
+                    return s_hist if save_history else 0, [s_hist[itercount-2, 0], s_hist[itercount-2, 1]], ll_hist if save_history else ll_hist[ll_hist < 0][-1], init_params_cache[-2, :], itercount-2, 3
 
             s_hist[itercount + 1, :] = (s1_next, s2_next)
             if self.update_type != "neutral":
@@ -461,40 +460,52 @@ class HMM:
             assert np.all(np.isclose(np.sum(self.a, axis=1), 1))
             itercount += 1
         print(f"{loc} Max iterations exceeded without convergence. Stopping.")
-        return s_hist, [self.s1, self.s2], ll_hist, self.init_params, itercount-1, 9
+        return s_hist if save_history else 0, [self.s1, self.s2], ll_hist if save_history else ll_hist[ll_hist < 0][-1], self.init_params, itercount-1, 9
 
-    def compute_s(self, obs_counts, nts, sample_times, update_type, init_update_type, tol, max_iter, progressbar=True, min_init_val=1e-8, **update_args):
+    def compute_s(self, obs_counts, nts, sample_times, update_type, init_update_type, tol, max_iter, progressbar=True, data_mean=False, min_init_val=1e-8, save_history=False, **update_args):
         self.num_replicates = obs_counts.shape[0]
         self.update_type = update_type
         self.init_update_type = init_update_type
         self.update_func, self.update_func_args = self.get_update_func(update_type, update_args)
         self.init_update_func, self.init_params_to_state_func, self.init_update_size = self.get_init_update_func(init_update_type)
-        self.s_history = np.zeros((max_iter+1, 2, self.num_replicates))
-        self.ll_history = np.zeros((max_iter+1, self.num_replicates))
+        self.s_history = np.zeros((max_iter+1, 2, self.num_replicates)) if save_history else 0
+        self.ll_history = np.zeros((max_iter+1, self.num_replicates)) if save_history else 0
         self.s_final = np.zeros((2, self.num_replicates))
         self.ll_final = np.zeros((self.num_replicates, 1))
-        self.init_params_hist = np.zeros((self.num_replicates, self.init_update_size))
-        self.itercount_hist = np.zeros((self.num_replicates, 1), dtype=int)
-        self.alpha_history = np.zeros((max_iter, self.num_replicates))
-        self.alpha_vals = np.zeros((max_iter, self.num_replicates))
+        self.init_params_array = np.zeros((self.num_replicates, self.init_update_size))
+        self.itercount_array = np.zeros((self.num_replicates, 1), dtype=int)
         self.exit_codes = np.zeros((self.num_replicates))
         loop_idxs = tqdm(range(self.num_replicates)) if progressbar else range(self.num_replicates)
         for i in loop_idxs:
             self.update_internals_from_datum(obs_counts[i], nts[i], sample_times[i])
-            if self.custom_init_cond:
-                self.init_state = self.init_cond[i, :]
+            if data_mean:
+                mean_freq = np.sum(obs_counts[i]) / np.sum(nts[i])
+                temp_init_state = np.zeros_like(self.init_state) + min_init_val
+                temp_init_state[np.clip(np.argmin(np.abs(self.gs - mean_freq)), 1, self.N - 2)] = 1.
+                self.init_state = temp_init_state / np.sum(temp_init_state)
             else:
                 self.init_state = np.copy(self.init_init_state)
             self.s1 = self.s1_init
             self.s2 = self.s2_init
             self.a = self.a_init
-            self.s_history[:, :, i], self.s_final[:, i], self.ll_history[:, i], self.init_params_hist[i, :], self.itercount_hist[i, 0], self.exit_codes[i] = self.compute_one_s(i, tol, max_iter, min_init_val=min_init_val)
-            self.ll_final[i, 0] = self.ll_history[:, i][self.ll_history[:, i] < 0][-1]
-        return self.s_history, self.s_final, self.ll_history, self.init_params_hist, self.itercount_hist, self.exit_codes
+            run_result = self.compute_one_s(i, tol, max_iter, min_init_val=min_init_val,save_history=save_history)
+            self.s_final[:, i] = run_result[1]
+            self.init_params_array[i, :] = run_result[3]
+            self.itercount_array[i, 0] = run_result[4]
+            self.exit_codes[i] = run_result[5]
+            if save_history:
+                self.s_history[:, :, i] = run_result[0]
+                self.ll_history[:, i] = run_result[2]
+                self.ll_final[i, 0] = run_result[2][run_result[2] < 0][-1]
+            else:
+                self.ll_final[i, 0] = run_result[2]
+        return self.s_history, self.s_final, self.ll_history if save_history else self.ll_final, self.init_params_array, self.itercount_array, self.exit_codes
 
-    def compute_multiple_ll(self, s1, s2, obs_counts_array, nts_array, sample_locs_array):
-
-        ll_T = sample_locs_array[0,-1] + 1
+    def compute_multiple_ll(self, s1, s2, data_matrix, init_states=None):
+        sample_locs_array = data_matrix[:, ::3]
+        nts_array = data_matrix[:, 1::3]
+        obs_counts_array = data_matrix[:, 2::3]
+        ll_T = int(sample_locs_array[0, -1] + 1)
         ll_nloc = obs_counts_array.shape[0]
         ll_sample_locs = sample_locs_array[0, :]
 
@@ -516,19 +527,22 @@ class HMM:
 
         ll_bpmf_idx = np.cumsum(ll_nts_uq + 1)
         for i, nt in enumerate(ll_nts_uq[1:], 1):
-            ll_bpmf_a[ll_bpmf_idx[i - 1]:ll_bpmf_idx[i]] = np.arange(nt + 1)
-            ll_bpmf_n[ll_bpmf_idx[i - 1]:ll_bpmf_idx[i]] = nt
+            ll_bpmf_a[ll_bpmf_idx[i - 1]: ll_bpmf_idx[i]] = np.arange(nt + 1)
+            ll_bpmf_n[ll_bpmf_idx[i - 1]: ll_bpmf_idx[i]] = nt
 
         ll_b = binom
         # self.bpmf = self.b.pmf(np.broadcast_to(self.obs_counts[..., None], self.obs_counts.shape+(self.N,)), np.broadcast_to(self.nts[..., None], self.nts.shape+(self.N,)), np.broadcast_to(self.gs, (self.nloc, self.T, self.N))).transpose([1,2,0])
-        ll_bpmf_new = ll_b.pmf(np.broadcast_to(ll_bpmf_a[..., None], ll_bpmf_a.shape + (self.N,)),
-                                   np.broadcast_to(ll_bpmf_n[..., None], ll_bpmf_n.shape + (self.N,)),
-                                   np.broadcast_to(self.gs, (ll_bpmf_a.shape[0], self.N)))
+        ll_bpmf_new = ll_b.pmf(
+            np.broadcast_to(ll_bpmf_a[..., None], (*ll_bpmf_a.shape, self.N)),
+            np.broadcast_to(ll_bpmf_n[..., None], (*ll_bpmf_n.shape, self.N)),
+            np.broadcast_to(self.gs, (ll_bpmf_a.shape[0], self.N)),
+        )
 
         ll_a_t_to_bpmf_idx = np.zeros_like(ll_nts)
         for i, t in np.transpose(np.nonzero(ll_nts)):
-            ll_a_t_to_bpmf_idx[i, t] = ll_obs_counts[i, t] + ll_bpmf_idx[
-                np.where(ll_nts_uq == ll_nts[i, t])[0][0] - 1]
+            ll_a_t_to_bpmf_idx[i, t] = (
+                    ll_obs_counts[i, t] + ll_bpmf_idx[np.where(ll_nts_uq == ll_nts[i, t])[0][0] - 1]
+            )
 
         ll_a = self.calc_transition_probs_old([s1, s2])
         assert np.all(np.isclose(np.sum(ll_a, axis=1), 1))
@@ -537,15 +551,25 @@ class HMM:
         uq_a_powers = np.unique(sample_time_diffs)
         uq_a_exps = get_uq_a_exps(ll_a, uq_a_powers)
         ll_cs = np.ones((ll_T, ll_nloc))
-        ll_alphas_tilde = np.einsum("i, ni->in", self.init_state, ll_bpmf_new[ll_a_t_to_bpmf_idx[:, 0], :])
-        ll_cs[0, :] = 1. / np.sum(ll_alphas_tilde, axis=0)
+        if init_states is not None:
+            assert init_states.shape == (ll_nloc, self.N)
+            ll_alphas_tilde = np.einsum("ni, ni -> in", init_states, ll_bpmf_new[ll_a_t_to_bpmf_idx[:, 0], :])
+        else:
+            ll_alphas_tilde = np.einsum(
+                "i, ni->in", self.init_state, ll_bpmf_new[ll_a_t_to_bpmf_idx[:, 0], :]
+            )
+        ll_cs[0, :] = 1.0 / np.sum(ll_alphas_tilde, axis=0)
         ll_alphas_hat = np.einsum("n, in -> in", ll_cs[0, :], ll_alphas_tilde)
         for i, t in enumerate(sample_times[1:]):
-            ll_alphas_tilde = np.einsum("in, ij, nj -> jn", ll_alphas_hat,
-                    uq_a_exps[np.where(uq_a_powers == sample_time_diffs[i])[0][0]],ll_bpmf_new[ll_a_t_to_bpmf_idx[:, t], :])
-            ll_cs[t, :] = 1. / np.sum(ll_alphas_tilde, axis=0)
+            ll_alphas_tilde = np.einsum(
+                "in, ij, nj -> jn",
+                ll_alphas_hat,
+                uq_a_exps[np.where(uq_a_powers == sample_time_diffs[i])[0][0]],
+                ll_bpmf_new[ll_a_t_to_bpmf_idx[:, t], :],
+            )
+            ll_cs[t, :] = 1.0 / np.sum(ll_alphas_tilde, axis=0)
             ll_alphas_hat = np.einsum("n, in -> in", ll_cs[t, :], ll_alphas_tilde)
-            assert np.all(np.isclose(np.sum(ll_alphas_hat, axis=0), 1.))
+            assert np.all(np.isclose(np.sum(ll_alphas_hat, axis=0), 1.0))
         return -np.sum(np.log(ll_cs), axis=0)
 
     def is_valid_s(self, s1, s2):

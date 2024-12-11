@@ -15,10 +15,23 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
-EM_dir = "EM"
-output_dir = "output"
+num_gens_list = [125]
+init_dists = ["real_special"]
+
+EM_dir = "EM/ibdne"
+output_dir = "output/ibdne"
 
 ###### DO NOT MODIFY
+
+if "matched" in EM_dir:
+    EM_suffix = "Ne9987_"
+    output_suffix = "real_matched_"
+elif "ibdne" in EM_dir:
+    EM_suffix = "Ne35119_"
+    output_suffix = "ibdne_"
+else:
+    EM_suffix = ""
+    output_suffix = ""
 
 plt.rcParams.update({'font.size': 9,
                      'text.usetex': False,
@@ -40,10 +53,6 @@ classification_types = ["neutral", "add", "dom", "rec", "over", "under", "full"]
 sel_types = ["add", "dom", "rec", "over", "under"]
 sel_types_rows = ["add", "dom", "rec", "over", "under"]
 
-# subdir_name = "tree/real/fake"
-# num_gens_list = [125]
-# init_dists = ["real_special"]
-
 for num_gens in num_gens_list:
     for init_dist in init_dists:
             if init_dist in [.005, "recip"]:
@@ -60,7 +69,7 @@ for num_gens in num_gens_list:
             ndict["init_dist"] = init_dist
 
             neutral_filename = params_dict_to_str(**ndict)
-            neutral_hmm_path = Path(f"{EM_dir}/{neutral_filename}_EM.pkl")
+            neutral_hmm_path = Path(f"{EM_dir}/{neutral_filename}_{EM_suffix}EM.pkl")
             with open(neutral_hmm_path, "rb") as file:
                 nf = pickle.load(file)
 
@@ -88,7 +97,7 @@ for num_gens in num_gens_list:
                 for str_i, sel_str in enumerate(sel_strs):
                     pdict["sel_str"] = sel_str
                     nn_fname = params_dict_to_str(**pdict)
-                    nn_path = Path(f"{EM_dir}/{nn_fname}_EM.pkl")
+                    nn_path = Path(f"{EM_dir}/{nn_fname}_{EM_suffix}EM.pkl")
                     if not nn_path.is_file():
                         print(f"{nn_path} not found")
                         sf_llr = np.zeros(nf["neutral_ll"].shape[0])
@@ -109,7 +118,7 @@ for num_gens in num_gens_list:
                 labels.append(convert_from_abbrevs(run_EM_str, shorthet=True))
             thinning = init_dist == "real_special"
             plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning)
-            fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_llr_all.pdf"), format="pdf", bbox_inches="tight")
+            fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}llr_all.pdf"), format="pdf", bbox_inches="tight")
             plt.close(fig)
 
             big_ts_dict = {}
@@ -127,5 +136,5 @@ for num_gens in num_gens_list:
             axs2.set_xlabel(r"$\bf{s}$", fontsize=10)
             axs2.xaxis.set_label_position('top')
             axs2.set_ylabel(r"$\bf{Mode}$", fontsize=10)
-            fig2.savefig(f"{output_dir}/{big_ts_str}_auc_plot.pdf", format="pdf", bbox_inches="tight")
+            fig2.savefig(f"{output_dir}/{big_ts_str}_{output_suffix}auc_plot.pdf", format="pdf", bbox_inches="tight")
             plt.close(fig2)

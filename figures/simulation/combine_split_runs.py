@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 ###### MODIFY
 
-EM_dir = "EM"
+EM_dir = "EM/real_matched/permutations"
 
 ###### DO NOT MODIFY
 
@@ -20,6 +20,8 @@ for fpath in Path(EM_dir).iterdir():
         if Path(hmm_basepath + ".pkl").is_file():
             print(f"already exists: {hmm_basepath}")
             continue
+
+
 
         num_files += 1
 

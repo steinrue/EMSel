@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 ###### MODIFY
 
-EM_dir = "EM"
+EM_dir = "EM/bootstrap"
 
 ###### DO NOT MODIFY
 

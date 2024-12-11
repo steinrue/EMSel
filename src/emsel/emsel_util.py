@@ -5,8 +5,9 @@ from matplotlib.ticker import StrMethodFormatter
 from numba import njit
 from scipy.stats import chi2, beta
 from copy import deepcopy
+from typing import Union
 
-def generate_wf_data(p: float, N: int, N_samples: int, s1: int, s2: int, num_gens: int, sample_locs, seed: int):
+def generate_wf_data(p: float, N: Union[int, np.ndarray], N_samples: int, s1: float, s2: float, num_gens: int, sample_locs, seed: int):
     rng = np.random.default_rng(seed=seed)
     freqs = np.zeros(num_gens)
     nt = np.zeros(int(num_gens), dtype=int)
@@ -27,13 +28,18 @@ def generate_wf_data(p: float, N: int, N_samples: int, s1: int, s2: int, num_gen
     true_data = freqs
     return samples, true_data
 
-def generate_multiple_wf_data(p, N, N_samples, s1, s2, num_gens, sample_locs, seed, small_s=False):
+def generate_multiple_wf_data(p: float, N: Union[int, np.ndarray], N_samples: int, s1: float, s2: float, num_gens: int, sample_locs, seed: int, small_s=False):
+    if isinstance(N, int):
+        N_array = np.zeros(num_gens) + N
+    else:
+        assert N.shape == (num_gens,)
+        N_array = N
     rng = np.random.default_rng(seed=seed)
     freqs = np.zeros((p.shape[0], num_gens))
     freqs[:, 0] = p
     nt = np.zeros_like(sample_locs)+N_samples
     for i in np.arange(num_gens - 1):
-        freqs[:, i + 1] = forward_one_gen(freqs[:, i], N, s1, s2, rng, small_s)
+        freqs[:, i + 1] = forward_one_gen(freqs[:, i], N_array[i], s1, s2, rng, small_s)
         if np.all(freqs[:, i+1] <= 0):
             all_obs_counts = rng.binomial(nt, freqs[:, sample_locs])
             return all_obs_counts, freqs
@@ -70,15 +76,18 @@ def forward_one_gen(p_vector, pop_size, s1, s2, rng, small_s=False):
 
 
 def generate_data(pd):
+    data_matched_flag = True
     if "sampling_matrix" in pd:
         nt = pd["sampling_matrix"][:, 1]
         sample_times = pd["sampling_matrix"].shape[0]
         sample_locs = pd["sampling_matrix"][:, 0]
+        full_nts = np.zeros((1, sample_times))
     else:
+        data_matched_flag = False
         nt = np.zeros(int(pd["sample_times"]), dtype=int) + pd["num_samples"]
         sample_times = pd["sample_times"]
         sample_locs = np.linspace(0, int(pd["num_gens"]) - 1, sample_times, dtype=int)
-    full_nts = [] if "sampling_matrix" not in pd else np.zeros((1, sample_times))
+        full_nts = []
     full_num_samples = []
     full_sample_locs = []
     p_inits = np.zeros(1,)
@@ -115,7 +124,7 @@ def generate_data(pd):
                     hits_missing = outer_rng.binomial(temp_samples, 1 - missingness_vals[:, np.newaxis],size=temp_samples.shape)
                     misses_missing = outer_rng.binomial(nt - temp_samples,1 - missingness_vals[:, np.newaxis],size=temp_samples.shape)
                     assert np.all(hits_missing + misses_missing <= nt)
-                    print(f"Pre-missingness: {np.mean(temp_samples):.4f} avg. samples. Post: {np.mean(hits_missing):.4f}")
+                    print(f"Pre-missingness: {np.mean(temp_samples):.4f} avg. hits. Post: {np.mean(hits_missing):.4f}")
 
                     temp_nts = hits_missing + misses_missing
                     temp_samples_ms = hits_missing
@@ -128,15 +137,14 @@ def generate_data(pd):
                     min_fd = np.minimum(total_fd, total_ns - total_fd)
                     maf_mask = min_fd > total_ns * pd["means_array"][0]
                     all_mask = anc_samples_mask & num_samples_mask & maf_mask
-
                     full_nts = np.vstack((full_nts, temp_nts[all_mask, :]))
                     temp_samples = temp_samples_ms
+
                 else:
                     total_fd = np.sum(nt)
                     total_ns = np.sum(temp_samples, axis=1)
-
                     min_fd = np.minimum(total_fd, total_ns - total_fd)
-                    maf_mask = min_fd > total_ns * .05
+                    maf_mask = min_fd > total_ns * pd["means_array"][0]
                     all_mask = maf_mask
             elif pd["sel_type"] == "under":
                 samples_greater_than_zero_start = temp_samples[:, 0] > 0
@@ -169,7 +177,7 @@ def generate_data(pd):
     data_dict = {
         "obs_counts": full_samples[1:pd["num_sims"]+1, :],
         "true_data": full_true_data[1:pd["num_sims"]+1, :],
-        "nt": full_nts[1:pd["num_sims"]+1, :] if "sampling_matrix" in pd else nt,
+        "nt": full_nts[1:pd["num_sims"]+1, :] if data_matched_flag else nt,
         "sample_times": full_num_samples if full_num_samples else sample_times,
         "sample_locs": full_sample_locs if full_sample_locs else sample_locs,
         "p_inits": p_inits[1:pd["num_sims"]+1],
@@ -226,7 +234,7 @@ def plot_one_ll_grid(fig, axs, s1_grid, s2_grid, ll_grid, vmin, vmax, s1_label =
         axs.set_ylabel("$s_2$")
     axs.set_aspect("equal")
 
-def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", thin=False):
+def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", thin=False, rasterized=False):
     assert len(logps) == len(labels)
     len_ps = logps[0].shape[0]
     xrange = np.arange(1, len_ps+1)
@@ -245,11 +253,11 @@ def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", th
         else:
             idxs = np.arange(len_ps)
         if colors:
-            axins.plot(xrange[idxs] / len_ps, np.power(10, -sorted_logps)[idxs], lw=2, label=labels[i], color=colors[i])
-            axs.plot(-np.log10(xrange[idxs] / len_ps), sorted_logps[idxs], ".", lw=2, color=colors[i])
+            axins.plot(xrange[idxs] / len_ps, np.power(10, -sorted_logps)[idxs], lw=2, label=labels[i], color=colors[i], rasterized=rasterized)
+            axs.plot(-np.log10(xrange[idxs] / len_ps), sorted_logps[idxs], ".", lw=2, color=colors[i], rasterized=rasterized)
         else:
-            axins.plot(xrange[idxs] / len_ps, np.power(10, -sorted_logps)[idxs], lw=2, label=labels[i])
-            axs.plot(-np.log10(xrange[idxs] / len_ps), sorted_logps[idxs], ".", lw=2)
+            axins.plot(xrange[idxs] / len_ps, np.power(10, -sorted_logps)[idxs], lw=2, label=labels[i], rasterized=rasterized)
+            axs.plot(-np.log10(xrange[idxs] / len_ps), sorted_logps[idxs], ".", lw=2, rasterized=rasterized)
 
     unlog_max_y = np.power(10, -max_y)
     lin_xspace = np.linspace(unlog_max_y/2, len_ps+.9, num_conf_pts)
@@ -258,7 +266,7 @@ def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", th
     geom_sigma = np.sqrt((geom_xspace*(len_ps-geom_xspace+1))/((len_ps+2)*(len_ps+1)**2))
 
     axins.plot([0, 1], [0, 1], color="k", lw=1)
-    axins.fill_between(lin_xspace/len_ps, lin_xspace/len_ps-1.96*lin_sigma, lin_xspace/len_ps+1.96*lin_sigma, color="k", alpha=.2)
+    axins.fill_between(lin_xspace/len_ps, lin_xspace/len_ps-1.96*lin_sigma, lin_xspace/len_ps+1.96*lin_sigma, color="k", alpha=.2, rasterized=rasterized)
     axins.set_xlim([0, 1])
     axins.set_ylim([0, 1])
     axs.plot([0, max_y * 1.05], [0, max_y * 1.05], color="k", lw=1)
@@ -266,7 +274,7 @@ def plot_qq(axs, axins, logps, labels, colors=None, legend_loc="upper right", th
     lower_loglim = -np.log10(np.array([beta.ppf(.025, i, len_ps-i) for i in range(1,len_ps)]))
     conf_xspace = -np.log10((np.arange(1,len_ps)-.5)/len_ps)
     #lower_loglim = -np.log10(np.clip(geom_xspace/len_ps+1.96*geom_sigma, np.power(10, -max_y*2), None))
-    axs.fill_between(conf_xspace, lower_loglim, upper_loglim, color="k", alpha=.08)
+    axs.fill_between(conf_xspace, lower_loglim, upper_loglim, color="k", alpha=.08, rasterized=rasterized)
 
 
     axs.get_xaxis().set_major_formatter(StrMethodFormatter('{x:,.1f}'))
@@ -372,8 +380,7 @@ def full_bh_procedure(llgka_list, fitted_dist, lr_shift, alpha, bh=True):
 
     flat_p_vals = np.zeros(1)
     for p_val_array in p_vals:
-        for col in np.arange(p_val_array.shape[1]):
-            flat_p_vals = np.hstack((flat_p_vals, p_val_array[:, col]))
+        flat_p_vals = np.hstack((flat_p_vals, p_val_array.flatten("F")))
     flat_p_vals = flat_p_vals[1:]
     if bh:
         BH_line, rejected_ps = bh_correct(flat_p_vals, alpha, yekutieli=False)
@@ -390,6 +397,42 @@ def full_bh_procedure(llgka_list, fitted_dist, lr_shift, alpha, bh=True):
             p_idx += classified_array.shape[0]
         classified_array_list.append(classified_array)
     return BH_line, p_vals, classified_array_list
+
+def bh_procedure_2(full_llrs_list, llgka_list, fitted_dist, lr_shift, alpha, bh=True):
+    p_vals = []
+    for temp_llrs in full_llrs_list:
+        temp_p_vals = np.zeros_like(temp_llrs)
+        if lr_shift > 0:
+            temp_p_vals[temp_llrs > lr_shift] = (1 - fitted_dist.cdf(temp_llrs[temp_llrs > lr_shift] - lr_shift)) / 2
+            temp_p_vals[temp_llrs <= lr_shift] = np.clip(1 - temp_llrs[temp_llrs <= lr_shift] / (2 * lr_shift), .5, 1)
+        else:
+            temp_p_vals = 1 - fitted_dist.cdf(temp_llrs)
+        p_vals.append(temp_p_vals)
+
+    flat_p_vals = np.zeros(1)
+    for p_val_array in p_vals:
+        flat_p_vals = np.hstack((flat_p_vals, p_val_array.flatten("F")))
+    flat_p_vals = flat_p_vals[1:]
+    if bh:
+        BH_line, rejected_ps = bh_correct(flat_p_vals, alpha, yekutieli=False)
+    else:
+        BH_line, rejected_ps = (alpha, np.where(flat_p_vals <= alpha)[0])
+    p_idx = 0
+    classified_array_list = []
+    for p_i, array_p in enumerate(p_vals):
+        classified_array = np.zeros_like(array_p)
+        if classified_array.ndim < 2:
+            classified_array = classified_array[:, np.newaxis]
+        for col_p in np.arange(classified_array.shape[1]):
+            non_neutral_idxs = np.intersect1d(rejected_ps[rejected_ps < p_idx + classified_array.shape[0]],
+                                              rejected_ps[rejected_ps > p_idx]) - p_idx
+            if non_neutral_idxs.shape[0] > 0:
+                classified_array[non_neutral_idxs, col_p] = np.argmax(llgka_list[p_i][non_neutral_idxs, 1:, col_p],
+                                                                      axis=1) + 1
+            p_idx += classified_array.shape[0]
+        classified_array_list.append(classified_array)
+    return BH_line, p_vals, classified_array_list
+
 
 def bh_correct(p_values, alpha, yekutieli=False):
     M = p_values.shape[0]
@@ -437,6 +480,18 @@ def classify_llgk_array(llgk_array):
 def get_lr_statistic(llgk_array):
     best_lr = np.amax(llgk_array[:, 1:, :], axis=1)
     return 2*(best_lr - llgk_array[:, 0, :])
+
+def correct_for_het(classified_vals, s_list, onep_types):
+    assert onep_types[-1] == "het", "List of one-parameter modes must end with 'het' to correct for it!"
+    for t_i, t_v in enumerate(classified_vals):
+        ov_mask = (t_v == len(onep_types)) & (s_list[t_i] >= 0)
+        ud_mask = (t_v == len(onep_types)) & (s_list[t_i] < 0)
+        t_v[t_v == len(onep_types)+1] -= 1
+        t_v[t_v == len(onep_types)+2] -= 1
+        t_v[t_v == len(onep_types)+3] -= 1
+        t_v[ov_mask] = len(onep_types)
+        t_v[ud_mask] = len(onep_types)+1
+    return classified_vals
 
 def params_dict_to_str(**kwargs):
     name_str = ""
@@ -549,12 +604,12 @@ def get_1d_s_data_from_type(s_data, sel_type):
 
 
 def convert_from_abbrevs(names_list, shorthet=False, shortall=False):
-    short_names = ["add", "dom", "rec", "over", "under", "het", "full"]
-    long_names = ["Additive", "Dominant", "Recessive", "Overdominant", "Underdominant", "Heterozygote difference", "Multi-alternative"]
+    short_names = ["neutral", "add", "dom", "rec", "over", "under", "het", "full"]
+    long_names = ["Neutral", "Additive", "Dominant", "Recessive", "Overdominant", "Underdominant", "Heterozygote difference", "Multi-alternative"]
     if shorthet:
         long_names[long_names.index("Heterozygote difference")] = "Het. diff."
     if shortall:
-        long_names = ["Add.", "Dom.", "Rec.", "Over.", "Under.", "Het. diff.", "Uncons."]
+        long_names = ["Neut.", "Add.", "Dom.", "Rec.", "Over.", "Under.", "Het. diff.", "Uncons."]
     if isinstance(names_list, list):
         names_list_copy = deepcopy(names_list)
         for l_i, long_name in enumerate(long_names):

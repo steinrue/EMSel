@@ -14,17 +14,30 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
+num_gens_list = [125]
+init_dists = ["real_special"]
+
 #set to True for strip plots (e.g. Figure 6)
 cond_only = False
 
-data_dir = "data"
-EM_dir = "EM"
-output_dir = "output"
+data_dir = "data/ibdne"
+EM_dir = "EM/ibdne"
+output_dir = "output/ibdne"
 classified_dir = "classified"
 
 
 
 ####### DO NOT MODIFY
+
+if "matched" in EM_dir:
+    EM_suffix = "Ne9987_"
+    output_suffix = "real_matched_"
+elif "ibdne" in EM_dir:
+    EM_suffix = "Ne35119_"
+    output_suffix = "ibdne_"
+else:
+    EM_suffix = ""
+    output_suffix = ""
 
 plt.rcParams.update({'font.size': 9,
                      'text.usetex': False,
@@ -46,6 +59,8 @@ cond_types = ["neutral", "add", "dom", "rec"]
 
 run_types = ["add", "dom", "rec", "het"]
 iter_types = cond_types if cond_only else sel_types
+
+max_num_pts = 1000
 
 for n_i, num_gens in enumerate(num_gens_list):
      for d_i, init_dist in enumerate(init_dists):
@@ -84,9 +99,9 @@ for n_i, num_gens in enumerate(num_gens_list):
                 else:
                     continue
 
-            hmm_filename = Path(f"{EM_dir}/{exp_name}_EM.pkl")
+            hmm_filename = Path(f"{EM_dir}/{exp_name}_{EM_suffix}EM.pkl")
             pd_filename = Path(f"{data_dir}/{exp_name}_data.csv")
-            bh_filename = Path(f"{classified_dir}/{exp_name}_classified.pkl")
+            bh_filename = Path(f"{classified_dir}/{exp_name}_{output_suffix}classified.pkl")
 
             if not pd_filename.is_file():
                 print(f"pd file not found: {pd_filename}")
@@ -108,7 +123,7 @@ for n_i, num_gens in enumerate(num_gens_list):
             if cond_only:
                 with open(bh_filename, "rb") as file:
                     bf = pickle.load(file)
-                idx_list = np.where(bf["bh_classes"][:500] == sel_types.index(sel_type))[0]
+                idx_list = np.where(bf["bh_classes"][:max_num_pts] == sel_types.index(sel_type))[0]
                 num_pts = idx_list.shape[0]
                 if num_pts == 0:
                     num_pts = 1
@@ -116,7 +131,7 @@ for n_i, num_gens in enumerate(num_gens_list):
                 else:
                     fake_one = False
             elif init_dist == "real_special":
-                num_pts = 500
+                num_pts = max_num_pts
                 idx_list = np.arange(num_pts)
             else:
                 idx_list = np.arange(num_pts)
@@ -224,5 +239,5 @@ for n_i, num_gens in enumerate(num_gens_list):
             for handle in lgd.legend_handles:
                 handle.set_markersize(4)
         axs.set_ylim([min_quantile, max_quantile])
-        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight")
+        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{output_suffix}{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight")
         plt.close(fig)

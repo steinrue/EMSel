@@ -3,12 +3,14 @@ from pathlib import Path
 ###### MODIFY
 EM_dir = Path('EM/bootstrap')
 data_dir = Path('data/bootstrap')
-genodata_type = "capture_SG"
+genodata_type = "capture_only"
 
 qsub_dir = Path('qsubs')
 max_run_hours = 20
 num_cores = 30
 mem_required = 30
+
+Ne = 9715
 
 
 #this directory must be made beforehand
@@ -27,7 +29,7 @@ def writeQsubs():
     script_file = Path("meta_gb_EM.sh")
     with open(script_file, "w") as file:
         for fpath in data_dir.iterdir():
-            if (genodata_type not in fpath.name and "bootstrap" not in data_dir.name) or ("binned" in fpath.name):
+            if "bootstrap" not in data_dir.name and genodata_type not in fpath.name:
                 continue
             for ug_i, update_group in enumerate(new_ugs):
                 if fpath.suffix == ".vcf" or fpath.suffix == ".csv":
@@ -36,20 +38,24 @@ def writeQsubs():
                     sbatchOutFile = Path(qsub_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}.sout")
                     sbatchErrFile = Path(qsub_dir, f"{fpath.stem}_EM_{ug_i+1}o{total_ugs}.serr")
                     # put together a nice command?
-                    if fpath.suffix == ".vcf":
-                        hmm_cmd = f"emsel {fpath} {out_name} --time_before_present {'--save_csv' if ug_i == 0 else ''} --info_file {data_dir}/GB_v54.1_{genodata_type}_inds.table --info_cols Genetic_ID Date_mean -ytg 28.1 --full_output --num_cores {num_cores} --selection_modes {' '.join(u_i for u_i in update_group)} --no_neutral --progressbar"
+                    if fpath.suffix == ".vcf" and "only" in genodata_type:
+                        hmm_cmd = f"emsel {fpath} {out_name} --time_before_present {'--save_csv' if ug_i == 0 else ''} --info_file {data_dir}/GB_v54.1_{genodata_type}_inds.table --info_cols Genetic_ID Date_mean -ytg 28.1 --full_output --num_cores {num_cores} --selection_modes {' '.join(u_i for u_i in update_group)} --no_neutral --progressbar -Ne {Ne}"
                     else:
                         if ug_i > 0:
                             continue
                         vcf_ver = Path(fpath).with_suffix(".vcf")
-                        if vcf_ver.is_file():
+                        if fpath.suffix == ".vcf" and "SG" in genodata_type:
+                            hmm_cmd = f"emsel {fpath} {out_name} --time_before_present --save_csv --info_file {data_dir}/GB_v54.1_{genodata_type}_inds.table --info_cols Genetic_ID Date_mean -ytg 28.1 --full_output --num_cores {num_cores} --selection_modes neutral add --progressbar -Ne {Ne}"
+                        elif vcf_ver.is_file():
                             continue
                         if "bootstrap" in data_dir.name:
                             sel_type = fpath.stem.split("_")[1]
-                            hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes {sel_type} --no_neutral --progressbar"
-                        else:
-                            hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes neutral add --progressbar"
-
+                            hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes {sel_type} --no_neutral --progressbar -Ne {Ne}"
+                        elif "permuted" in fpath.name:
+                            if "100k" in fpath.name:
+                                hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes neutral add full --progressbar -Ne {Ne}"
+                            else:
+                                hmm_cmd = f"emsel {fpath} {out_name} --num_cores {num_cores} --time_after_zero --full_output --selection_modes neutral add --progressbar -Ne {Ne}"
                     if Path(out_name+'.csv').is_file() and Path(out_name+".csv").stat().st_size > 0:
                         print(f"File already exists: {out_name}! continuing.")
                         continue

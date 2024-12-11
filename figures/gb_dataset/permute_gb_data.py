@@ -13,11 +13,11 @@ genodata_type = "capture_only"
 MAF_filter = .05
 min_sample_filter = .1
 
+num_perms = 100000
+
 ###### DO NOT MODIFY
 chroms = range(1,23)
 ytg = 28.1
-
-permute = False
 rng = np.random.default_rng(0)
 
 for chrom in tqdm(chroms):
@@ -48,3 +48,18 @@ for chrom in tqdm(chroms):
 
     np.savetxt(chrom_save_path+".csv", final_table[combo_mask, :], delimiter="\t", fmt="%d",
                header="Each row = one replicate; each set of three columns = (sampling time, total samples, derived alleles)")
+
+for chrom in tqdm(chroms):
+    csv_path = f"{data_dir}/GB_v54.1_{genodata_type}_c{chrom}_permuted.csv"
+    if chrom == 1:
+        df = np.loadtxt(csv_path, delimiter="\t")
+    else:
+        df = np.vstack((df, np.loadtxt(csv_path, delimiter="\t")))
+
+alt_df_path = f"{data_dir}/GB_v54.1_{genodata_type}_100k_permuted.csv"
+new_df_idxs = rng.choice(np.arange(df.shape[0]), size=(num_perms,), replace=True)
+new_df = df[new_df_idxs, :].copy()
+np.savetxt(alt_df_path, new_df, delimiter="\t", fmt="%d",
+    header="Each row = one replicate; each set of three columns = (sampling time, total samples, derived alleles)")
+print(f"Permuted GB dataset!")
+

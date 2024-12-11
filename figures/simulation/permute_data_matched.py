@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 ####### MODIFY
 
-data_dir = "data"
+data_dir = "data/real_matched"
 
 ###### DO NOT MODIFY
 df_path = Path(f"{data_dir}/neutral_g125_dal_special_data.csv")

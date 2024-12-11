@@ -3,8 +3,8 @@ from pathlib import Path
 ###### MODIFY
 max_run_hours = 10
 num_cores = 30
-EM_dir = Path('EM')
-data_dir = Path('data')
+EM_dir = Path('EM/pure_sim')
+data_dir = Path('data/pure_sim')
 
 #this directory must be made beforehand
 qsub_dir = Path('qsubs')
@@ -21,9 +21,11 @@ def writeQsubs():
     with open(script_file, "w") as file:
         for fpath in data_dir.iterdir():
             if fpath.suffix == ".csv":
+                if "perm" in fpath.name:
+                    continue
                 if "g251_d25" in fpath.name:
                     for e_i, extra_cmd in enumerate(extra_cmds):
-                        mem=10
+                        mem=20
                         sel_type = fpath.name.split("_")[0]
                         if sel_type == "neutral":
                             sel_modes = "all"

@@ -31,6 +31,7 @@ def main():
     parser.add_argument("--save_plots", action="store_true", help="save plots of all of the replicate trajectories")
     parser.add_argument("--no_small_s", action="store_true", help="whether or not to use the small s approximation in the WF update")
     parser.add_argument("--suffix", type=str, default="", help="file names suffix to differentiate")
+    parser.add_argument("--vary_Ne", type=str, default="", help="input the path to a .txt file containing a list of Nes to use instead of a constant Ne")
     args = parser.parse_args()
 
     if args.Ne is not None:
@@ -72,6 +73,9 @@ def main():
         "Ne": args.Ne,
         "num_sims": args.num_sims,
     }
+
+    if args.vary_Ne != "":
+        pd["Ne"] = np.loadtxt(args.vary_Ne)
 
     if args.data_matched[0] != "":
         sampling_matrix = np.loadtxt(Path(f"{args.data_matched[2]}"), skiprows=1, dtype=int)
@@ -127,11 +131,10 @@ def main():
             pd["survive_only"] = True
             pd["sel_type"] = sel_type
             pd["small_s"] = args_dict["small_s"]
-            if args.data_matched[0] == "":
-                pd["init_cond"] = "recip" if init_dist == "recip" else "delta"
-            else:
+            if args.data_matched[0] != "":
                 pd["init_cond"] = "real_special"
-
+            else:
+                pd["init_cond"] = "recip" if init_dist == "recip" else "delta"
             if args.data_matched[0] != "":
                 pd["means_array"] = means_file
                 pd["missingness_array"] = missingness_file
@@ -177,7 +180,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 

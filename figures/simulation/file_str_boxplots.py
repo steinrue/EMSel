@@ -14,12 +14,17 @@ sel_strs = [.005, .01, .025, .05]
 num_gens = 251
 init_dist = .25
 
-data_dir = "data"
-EM_dir = "EM"
-output_dir = "output"
+data_dir = "data/pure_sim"
+EM_dir = "EM/pure_sim"
+output_dir = "output/pure_sim"
 
-file_strs = ["Ne5000_", "", "Ne20000_"]
-blank_name_str = "Ne10000_"
+
+
+file_strs = ["ns100_linear_", "linear_", "fixed_ic_", ""]
+blank_name_str = "standard_"
+
+# file_strs = ["Ne5000_", "", "Ne20000_"]
+# blank_name_str = "Ne10000_"
 
 ####### DO NOT MODIFY
 

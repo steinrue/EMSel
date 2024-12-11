@@ -90,6 +90,7 @@ and the following optional arguments:
 -sid, --starting_init_dist <str, default='uniform'>
     Starting initial distribution (pi_0 in HMM language) for initialization of the HMM. Options are: 
     - "uniform" - uniform, equiprobable prior (recommended/default)
+    - "data_mean" - each replicate's initial condition is the allele frequency averaged across all samples.
     - "delta" - use the "--ic_dict p x", where 0 <= x <= 1 to set the initial condition to a delta function at p = x.
     - "beta" - use "--ic_dict beta_coef alpha", where alpha is a real number, to set the initial condition to
          a symmetric beta function beta(alpha, alpha).
@@ -133,6 +134,11 @@ and the following optional arguments:
 --no_neutral
     Explicitly overrides the requirement that neutral be run for all simulation. Only to be used when parallelizing
     a simulation across mode of selection.
+
+--compute_cond
+    Computes the log-likelihood that the allele is segregating at at least time point. Adds a key to the dictionary,
+    "cond_correction_ll" containing an array of size (N,) corresponding to this probability for each replicate.
+    Only used in estimating the effective population size.
 
 
 -nc, --num_cores <int, default=1>
@@ -298,6 +304,12 @@ Number of replicates simulated from each set of simulation parameters.
     Effective population size for the simulations.
 
 
+--vary_Ne <str>
+    Input the path to a .txt file containing a value of Ne in each generation. This overrides the -Ne flag.
+    An example of such a varying-Ne dataset is provided (sample_datasets/ibdne_raw.txt) for use in
+    generating the IBDNe dataset.
+
+
 --data_matched <3 strs>
     Provide the path to a sample_means.txt file, a sample_missingness.txt file and a sample_sizes.table file to
     override the -ic, -g, -ns, and -st flags and simulate under the same initial distribution, number of generations,
@@ -308,6 +320,8 @@ Number of replicates simulated from each set of simulation parameters.
     line followed by one float per line representing sample missingness to draw from. The sample_sizes.table file
     can be obtained by running the pipeline in the figures/gb_dataset/extract_vcfs folder.
     Example files are also provided.
+
+
 
 
 --no_small_s

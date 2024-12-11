@@ -3,7 +3,7 @@ from matplotlib.patches import Rectangle
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel.emsel_util import classify_full_run, get_one_count_matrix, params_dict_to_str, get_llg_array, get_lr_statistic, get_llgka_array, full_bh_procedure, convert_from_abbrevs, convert_to_abbrevs, plot_qq
+from emsel.emsel_util import classify_full_run, correct_for_het, get_one_count_matrix, params_dict_to_str, get_llg_array, get_lr_statistic, get_llgka_array, full_bh_procedure, bh_procedure_2, convert_from_abbrevs, convert_to_abbrevs, plot_qq
 from copy import deepcopy
 from scipy.stats import chi2, gengamma
 from pandas import DataFrame
@@ -14,16 +14,27 @@ from cycler import cycler
 
 ###### MODIFY
 sel_strs = [.005, .01, .025, .05]
-num_gens_list = [101, 251, 1001]
+num_gens_list = [101,251,1001]
 init_dists = [.005, .25, "recip"]
 
-save_gengamma = False
+num_gens_list = [125]
+init_dists = ["real_special"]
 
-EM_dir = "EM"
+EM_dir = "EM/ibdne"
 classified_dir = "classified"
-output_dir = "output"
+output_dir = "output/ibdne"
 
 ###### DO NOT MODIFY
+
+if "matched" in EM_dir:
+    EM_suffix = "Ne9987_"
+    output_suffix = "real_matched_"
+elif "ibdne" in EM_dir:
+    EM_suffix = "Ne35119_"
+    output_suffix = "ibdne_"
+else:
+    EM_suffix = ""
+    output_suffix = ""
 
 plt.rcParams.update({'font.size': 9,
                      'text.usetex': False,
@@ -45,15 +56,12 @@ classification_types_rows = ["Neut.", "Add.", "Dom.", "Rec.", "Over.", "Under.",
 sel_types = ["add", "dom", "rec", "over", "under"]
 sel_types_rows = ["add", "dom", "rec", "over", "under"]
 
-
-
-onep_types = ["add", "dom", "rec"]
+onep_types = ["add", "dom", "rec", "het"]
 update_types = [*onep_types, "full"]
 final_sel_types = ["add", "dom", "rec", "over", "under"]
 
-gengamma_save_path = Path(f"{output_dir}/gengamma_params.pkl")
-
 p_val = .05
+k_opt = 1
 save_bh = True
 
 bigtable_idxs = []
@@ -61,7 +69,9 @@ full_bigtable_list = []
 for num_gens in num_gens_list:
     for init_dist in init_dists:
         row_list = []
-        g_list = []
+        g_list_data = []
+        llrs_data = []
+        hs_data = []
         ndict = {}
         ndict["sel_type"] = "neutral"
         ndict["num_gens"] = num_gens
@@ -69,108 +79,92 @@ for num_gens in num_gens_list:
 
         neutral_filename = params_dict_to_str(**ndict)
         row_list.append([neutral_filename])
-        neutral_hmm_path = Path(f"{EM_dir}/{neutral_filename}_EM.pkl")
-        with open(neutral_hmm_path, "rb") as file:
-            nf = pickle.load(file)
+        neutral_data_path = Path(f"{EM_dir}/{neutral_filename}_{EM_suffix}EM.pkl")
+        with open(neutral_data_path, "rb") as file:
+            nf_data = pickle.load(file)
 
-        n_ll_array = get_llg_array(nf, onep_types, classify_full_run(nf["full_run"]["s_final"])[0])[:, :, np.newaxis]
+        gengamma_path = Path(f"{output_dir}/{neutral_filename}_{output_suffix}gengamma_perm_fit.pkl")
+        n_ll_array_data = get_llg_array(nf_data, onep_types, classify_full_run(nf_data["full_run"]["s_final"])[0])[:, :, np.newaxis]
+        n_llr_data = 2*(nf_data["full_run"]["ll_final"]-nf_data["neutral_ll"])
+        n_hs_data = nf_data["het_run"]["s_final"][0, :][:, np.newaxis]
         final_sel_types = ["add", "dom", "rec", "over", "under"]
         for sel_str in sel_strs:
             pdict = deepcopy(ndict)
-            llg_array_list = []
+            llg_array_list_data = []
+            llr_list_data = []
+            hs_list_data = []
             row_strs = []
             for sel_i, sel_type in enumerate(sel_types):
                 pdict["sel_type"] = sel_type
                 pdict["sel_str"] = sel_str
                 exp_name = params_dict_to_str(**pdict)
-                onep_path = Path(f"{EM_dir}/{exp_name}_EM.pkl")
-                if sel_type == "under" and not onep_path.is_file():
+                onep_data_path = Path(f"{EM_dir}/{exp_name}_{EM_suffix}EM.pkl")
+                if sel_type == "under" and not onep_data_path.is_file():
                     final_sel_types = ["add", "dom", "rec", "over"]
                     continue
 
-                with open(onep_path, "rb") as file:
-                    ohf = pickle.load(file)
-
-                classified_array, _ = classify_full_run(ohf["full_run"]["s_final"])
-                temp_llg_array = get_llg_array(ohf, onep_types, classified_array)
-                llg_array_list.append(temp_llg_array)
+                with open(onep_data_path, "rb") as file:
+                    ohf_data = pickle.load(file)
+                classified_array_data, _ = classify_full_run(ohf_data["full_run"]["s_final"])
+                temp_llg_array_data = get_llg_array(ohf_data, onep_types, classified_array_data)
+                llg_array_list_data.append(temp_llg_array_data)
+                llr_list_data.append(2*(ohf_data["full_run"]["ll_final"]-ohf_data["neutral_ll"]))
+                hs_list_data.append(ohf_data["het_run"]["s_final"][0, :])
                 row_strs.append(convert_from_abbrevs(sel_type))
             row_list.append(row_strs)
-            g_ll_array = np.dstack(llg_array_list)
-            g_list.append(g_ll_array)
+            g_ll_array_data = np.dstack(llg_array_list_data)
+            g_list_data.append(g_ll_array_data)
+            g_llr_data = np.vstack(llr_list_data).T
+            llrs_data.append(g_llr_data)
+            hs_data.append(np.vstack(hs_list_data).T)
 
-        usable_length = len(final_sel_types)
-        k_opt_array = np.zeros(5000)
-        num_opt = 0
-        k_opt = 0
-        k_range = np.linspace(-5, 5, 5000)
-        for i, k in enumerate(k_range):
-            final_count_array = np.zeros((len(final_sel_types), len(onep_types) + 3))
-            for g_i, g_array in enumerate(g_list):
-                temp_count_matrix = get_one_count_matrix(k, g_array)
-                final_count_array[:usable_length, :] += temp_count_matrix[:usable_length, :]
-            num_temp = np.trace(final_count_array)
-            k_opt_array[i] = num_temp
-        k_opt_sg = savgol_filter(k_opt_array, 101, 3)
-        k_opt = k_range[np.argmax(k_opt_sg)]
-        k_opt_noisy = k_range[np.argmax(k_opt_array)]
+        with open(gengamma_path, "rb") as file:
+            gengamma_dict = pickle.load(file)
 
 
-        #k_opt = 1.5
-        nk_array = get_llgka_array(n_ll_array, k_opt, 0)
-        n_lrs = get_lr_statistic(nk_array).flatten()
-        n_lrs[n_lrs < 0] = 1e-14
-        lr_shift = np.median(n_lrs)
-        gengamma_sl_fit = gengamma(*gengamma.fit(n_lrs[n_lrs > lr_shift] - lr_shift, floc=0, fscale=1))
-        chisq1_sl_fit = chi2(1)
-        chisq2_sl_fit = chi2(2)
+        nk_array_data = get_llgka_array(n_ll_array_data, k_opt, 0)
+        med_p_vals = np.zeros_like(n_llr_data)
+        med_p_vals[n_llr_data > gengamma_dict["lr_shift"]] = (1 - gengamma_dict["gengamma_fit"].cdf(n_llr_data[n_llr_data > gengamma_dict["lr_shift"]] - gengamma_dict["lr_shift"])) / 2
+        med_p_vals[n_llr_data <= gengamma_dict["lr_shift"]] = np.clip(1 - n_llr_data[n_llr_data <= gengamma_dict["lr_shift"]] / (2 * gengamma_dict["lr_shift"]), .5, 1)
 
-        if save_gengamma:
-            gengamma_dict = {"k_opt": k_opt, "lr_shift": lr_shift, "gengamma_fit": gengamma_sl_fit}
-            with open(gengamma_save_path, "wb") as file:
-                pickle.dump(gengamma_dict, file)
-
-        med_p_vals = np.zeros_like(n_lrs)
-        med_p_vals[n_lrs > lr_shift] = (1 - gengamma_sl_fit.cdf(n_lrs[n_lrs > lr_shift] - lr_shift)) / 2
-        med_p_vals[n_lrs <= lr_shift] = np.clip(1 - n_lrs[n_lrs <= lr_shift] / (2 * lr_shift), .5, 1)
-
-        full_p_vals_1 = 1 - chisq1_sl_fit.cdf(n_lrs)
-        full_p_vals_2 = 1 - chisq2_sl_fit.cdf(n_lrs)
+        full_p_vals_1 = 1 - chi2(1).cdf(n_llr_data)
+        full_p_vals_2 = 1 - chi2(2).cdf(n_llr_data)
 
         blank_array = np.empty(len(classification_types), dtype=str)
         blank_array.fill("")
 
         gllgka_list = []
-        for gla in g_list:
+        for gla in g_list_data:
             gllgka_list.append(get_llgka_array(gla, k_opt, 0))
-        p_cutoff, g_p_val_matrix, test_vals = full_bh_procedure([nk_array, *gllgka_list], gengamma_sl_fit, lr_shift,
+        p_cutoff, g_p_val_matrix, test_vals = bh_procedure_2([n_llr_data, *llrs_data], [nk_array_data, *gllgka_list], gengamma_dict["gengamma_fit"], gengamma_dict["lr_shift"],
                                                                 p_val, bh=False)
-
-        n_full = np.array([np.sum(test_vals[0] == i)/test_vals[0].shape[0] for i in np.arange(len(classification_types))])
-        n_classified_vals = [np.sum(test_vals[0] == i)/test_vals[0].shape[0] for i in np.arange(len(classification_types))]
+        all_het_s_data = [n_hs_data, *hs_data]
+        final_classified_vals = correct_for_het(deepcopy(test_vals), all_het_s_data, onep_types)
+        n_full = np.array([np.sum(final_classified_vals[0] == i)/final_classified_vals[0].shape[0] for i in np.arange(len(classification_types))])
+        n_classified_vals = [np.sum(final_classified_vals[0] == i)/final_classified_vals[0].shape[0] for i in np.arange(len(classification_types))]
         n_max_idx = np.argmax(n_classified_vals)
         n_full[n_max_idx] = n_full[n_max_idx]
         n_full[0] = n_full[0]
 
         indices = [f"Neutral"]
         if save_bh:
-            tpath = Path(f"{classified_dir}/{row_list[0][0]}_classified.pkl")
+            tpath = Path(f"{classified_dir}/{row_list[0][0]}_{output_suffix}classified.pkl")
             bh_dict = {
-                "bh_classes": test_vals[0],
+                "bh_classes": final_classified_vals[0],
                 "p_vals": g_p_val_matrix[0],
                 "p_cutoff": p_cutoff
             }
             with open(tpath, "wb") as file:
                 pickle.dump(bh_dict, file)
-        test_vals = test_vals[1:]
+        final_classified_vals = final_classified_vals[1:]
         g_p_val_matrix = g_p_val_matrix[1:]
         row_list = row_list[1:]
         full_excel_array = np.copy(n_full)
         cut_idx = 0
         params_dict_to_str(**{"init_dist": init_dist, "num_gens": num_gens})
-        for s_i, s_array in enumerate(test_vals):
+        for s_i, s_array in enumerate(final_classified_vals):
             for col in np.arange(s_array.shape[1]):
-                tpath = Path(f"{classified_dir}/{convert_to_abbrevs(row_list[s_i][col])}_s{str(sel_strs[s_i])[2:]}_g{num_gens}_d{str(init_dist)[2:]}_classified.pkl")
+                tpath = Path(f"{classified_dir}/{convert_to_abbrevs(row_list[s_i][col])}_s{str(sel_strs[s_i])[2:]}_g{num_gens}_d{str(init_dist)[2:]}_{output_suffix}classified.pkl")
                 bh_dict = {
                     "bh_classes": s_array[:, col],
                     "p_vals": g_p_val_matrix[s_i][:, col],
@@ -178,7 +172,7 @@ for num_gens in num_gens_list:
                 }
                 with open(tpath, "wb") as file:
                     pickle.dump(bh_dict, file)
-        for s_i, s_array in enumerate(test_vals):
+        for s_i, s_array in enumerate(final_classified_vals):
             if sel_strs[s_i] in [0.005, 0.025]:
                 continue
             for col in np.arange(s_array.shape[1]):
@@ -236,7 +230,7 @@ for num_gens in num_gens_list:
                 Rectangle((diag_pos + 1 + offset, diag_pos + offset), 1 - 2 * offset, 1 - 2 * offset, ec=edge_col,
                           fc='none', lw=lw, alpha=alpha))
         tablename = params_dict_to_str(**{"init_dist": init_dist, "num_gens": num_gens})
-        fig2.savefig(Path(f"{output_dir}/{tablename}_confusion_plot.pdf"),format="pdf", bbox_inches="tight")
+        fig2.savefig(Path(f"{output_dir}/{tablename}_{output_suffix}confusion_plot.pdf"),format="pdf", bbox_inches="tight")
 
         fig, axs = plt.subplots(1, 1, figsize=(3.1, 3.1), layout="constrained")
         logps = [-np.log10(med_p_vals), -np.log10(full_p_vals_1), -np.log10(full_p_vals_2)]
@@ -246,5 +240,5 @@ for num_gens in num_gens_list:
         axs.text(-.2, .97, r"$\bf{D}$", fontsize=13, transform=axs.transAxes)
         thinning = init_dist == "real_special"
         plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=thinning)
-        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_dll_all.pdf"), format="pdf", bbox_inches="tight")
+        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}d2_all.pdf"), format="pdf", bbox_inches="tight")
         plt.close(fig)

@@ -10,10 +10,12 @@ data_dir = "data"
 EM_dir = "EM"
 output_dir = "output"
 genodata_type = "capture_only"
-classification_types = ["add", "dom", "het", "rec"]
+suffix = ""
+classification_types = ["add", "dom", "het", "rec", "full"]
 
 ###### DO NOT MODIFY
 chroms = range(1,23)
+
 alpha = .05
 
 all_s = {}
@@ -21,7 +23,7 @@ all_p = {}
 all_ll = {}
 for c_type in classification_types:
     all_p[f"{c_type}_p"] = np.array([0])
-    all_s[f"{c_type}_s"] = np.array([0])
+    all_s[f"{c_type}_s"] = np.array([0]) if c_type != "full" else np.zeros((1,2))
     all_ll[f"{c_type}_ll"] = np.array([0])
 all_ll["neutral_ll"] = np.array([0])
 all_loc = {}
@@ -45,7 +47,7 @@ num_bins = 5
 superfinal_binned_data = np.zeros((1, num_bins * 3))
 
 binned_path = Path(f"{data_dir}/GB_v54.1_{genodata_type}_complete_data_binned.csv")
-complete_agg_data_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_agg_data.pkl")
+complete_agg_data_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_{suffix}agg_data.pkl")
 means_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_means.txt")
 missingness_path = Path(f"{output_dir}/GB_v54.1_{genodata_type}_missingness.txt")
 for chrom in chroms:
@@ -57,11 +59,11 @@ for chrom in chroms:
     sample_times = df[:, ::3].astype(int)
 
     #aggregating various things
-    em_path = Path(f"{EM_dir}/GB_v54.1_{genodata_type}_c{chrom}_EM.pkl")
+    em_path = Path(f"{EM_dir}/GB_v54.1_{genodata_type}_c{chrom}_{suffix}EM.pkl")
     with open(em_path, "rb") as file:
         hf = pickle.load(file)
-    init_mean = hf["add_run"]["ic_dist"][0, :]/(hf["add_run"]["ic_dist"][0, :]+hf["add_run"]["ic_dist"][1, :])
-    agg_data["add_init_mean"] = init_mean
+    init_mean = hf["neutral_ic"][0, :]/(hf["neutral_ic"][0, :]+hf["neutral_ic"][1, :])
+    agg_data["neut_init_mean"] = init_mean
     neutral_ll = hf["neutral_ll"]
     pos = hf["pos"]
     a_ns = np.sum(num_samples, axis=1)
@@ -75,17 +77,22 @@ for chrom in chroms:
     agg_data["alt_allele"] = hf["alt_allele"]
     agg_data["neutral_ll"] = neutral_ll
     for classification_type in classification_types:
-        run_ll = hf[f"{classification_type}_run"]["ll_final"]
-        llr_real = 2 * (run_ll - neutral_ll)
-        llr = np.copy(llr_real)
-        llr[llr <= 0] = 1e-12
-        p_vals = -chi2(1).logsf(llr)/np.log(10)
-        agg_data[f"{classification_type}_ll_vals"] = llr
-        agg_data[f"{classification_type}_p_vals"] = p_vals
-        agg_data[f"{classification_type}_itercount"] = hf[f"{classification_type}_run"]["itercount_hist"]
-        agg_data[f"{classification_type}_s_vals"] = get_1d_s_data_from_type(hf[f"{classification_type}_run"]["s_final"], classification_type)
-        if not np.all(np.isfinite(p_vals)):
-            print(f"c {chrom} {classification_type} illegal stuff happening")
+        if classification_type == "full":
+            agg_data[f"{classification_type}_ll_vals"] = np.zeros_like(agg_data["pos"])
+            agg_data[f"{classification_type}_p_vals"] = np.zeros_like(agg_data["pos"])
+            agg_data[f"{classification_type}_s_vals"] = hf[f"{classification_type}_run"]["s_final"].T
+        else:
+            run_ll = hf[f"{classification_type}_run"]["ll_final"]
+            llr_real = 2 * (run_ll - neutral_ll)
+            llr = np.copy(llr_real)
+            llr[llr <= 0] = 1e-12
+            p_vals = -chi2(1).logsf(llr)/np.log(10)
+            agg_data[f"{classification_type}_ll_vals"] = llr
+            agg_data[f"{classification_type}_p_vals"] = p_vals
+            agg_data[f"{classification_type}_itercount"] = hf[f"{classification_type}_run"]["itercount_hist"]
+            agg_data[f"{classification_type}_s_vals"] = get_1d_s_data_from_type(hf[f"{classification_type}_run"]["s_final"], classification_type)
+            if not np.all(np.isfinite(p_vals)):
+                print(f"c {chrom} {classification_type} illegal stuff happening")
     for c_type in classification_types:
         all_p[f"{c_type}_p"] = np.concatenate((all_p[f"{c_type}_p"], agg_data[f"{c_type}_p_vals"]))
         all_s[f"{c_type}_s"] = np.concatenate(
@@ -100,7 +107,7 @@ for chrom in chroms:
             all_loc[f"chr_{chrom+1}_idx_offset"] = all_loc[f"chr_{chrom}_idx_offset"] + all_loc[f"chr_{chrom}"].shape[0]
             all_loc[f"chr_{chrom+1}_pos_offset"] = all_loc[f"chr_{chrom}_pos_offset"] + all_loc[f"chr_{chrom}"][-1]
             all_missingness = np.concatenate((all_missingness, agg_data["a_miss"]))
-            all_means = np.concatenate((all_means, agg_data["add_init_mean"]))
+            all_means = np.concatenate((all_means, agg_data["neut_init_mean"]))
             all_rsid = np.concatenate((all_rsid, agg_data["snp_ids"]))
             all_chrom = np.concatenate((all_chrom, np.zeros_like(agg_data["pos"])+chrom))
             all_ref_allele = np.concatenate((all_ref_allele, agg_data["ref_allele"]))
@@ -148,6 +155,8 @@ for chrom in chroms:
     superfinal_binned_data = np.vstack((superfinal_binned_data, binned_csv))
 
 for classification_type in classification_types:
+    if classification_type == "full":
+        continue
     data_to_save = {}
     p_bh, bh_locs = bh_correct(np.power(10, -all_p[f"{classification_type}_p"]), alpha, yekutieli=False)
     data_to_save["snp_idx"] = bh_locs
