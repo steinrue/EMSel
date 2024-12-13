@@ -10,8 +10,8 @@ data_dir = Path('data/pure_sim')
 qsub_dir = Path('qsubs')
 
 ###### DO NOT MODIFY
-extra_fnames = ["Ne5000", "Ne20000","ns100_linear", "linear", "fixed_ic"]
-extra_cmds = ["-Ne 5000", "-Ne 20000", "-hs 100 --hidden_interp linear --ic_update_type fixed",
+extra_fnames = ["ns100_linear", "linear", "fixed_ic"]
+extra_cmds = ["-hs 100 --hidden_interp linear --ic_update_type fixed",
               "--hidden_interp linear --ic_update_type fixed", "--ic_update_type fixed"]
 
 def writeQsubs():
@@ -21,7 +21,7 @@ def writeQsubs():
     with open(script_file, "w") as file:
         for fpath in data_dir.iterdir():
             if fpath.suffix == ".csv":
-                if "perm" in fpath.name:
+                if "perm" in fpath.name or "resim" in fpath.name:
                     continue
                 if "g251_d25" in fpath.name:
                     for e_i, extra_cmd in enumerate(extra_cmds):
@@ -42,7 +42,6 @@ def writeQsubs():
                         hmm_cmd = f"emsel {fpath} {out_name} --time_after_zero --full_output -maf 0 --min_sample_density 0 --num_cores {num_cores} --selection_modes {sel_modes} --no_neutral {extra_cmd} --progressbar"
                         if (Path(out_name).with_suffix(".csv").is_file() and Path(out_name).with_suffix(".csv").stat().st_size > 0):
                             print(f"File already exists: {out_name}! continuing.")
-                            continue
 
                         if hmm_cmd not in hmm_cmds:
                             # write a script for the cluster

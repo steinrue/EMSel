@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 import pickle
 from scipy.stats import chi2, beta
-from scipy.interpolate import CubicSpline#PchipInterpolator
+from scipy.interpolate import CubicSpline
 from emsel.emsel_util import bh_correct, get_1d_s_data_from_type
 from emsel.core import HMM
 from tqdm import tqdm
@@ -10,21 +10,24 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
+from copy import deepcopy
 
 ###### MODIFY
 
-data_dir = "data/pure_sim/boxplots"
-EM_dir = "EM/pure_sim/boxplots"
-output_dir = "output/pure_sim"
+data_dir = "data/ibdne/boxplots"
+EM_dir = "EM/ibdne/boxplots"
+output_dir = "output/ibdne"
 
 sim_Nes = [2500, 10000, 40000]
 prefixes = [*[f"g251_d25_Ne{sim_Ne}" for sim_Ne in sim_Nes]]
 labels = [rf"$N_e = {{{str(i)}}}$" for i in sim_Nes]
 EM_dirs = ["EM/pure_sim/boxplots", "EM/pure_sim/boxplots", "EM/pure_sim/boxplots"]
+true_maxes = [2500, 10000, 40000]
 
-#prefixes = ["g125_dal_special_realmatch", "g125_dal_special_ibdne"]
-#labels = ["Real matched", "IBDNe"]
-#EM_dirs = ["EM/real_matched/boxplots", "EM/ibdne/boxplots"]
+prefixes = ["g125_dal_special_realmatch", "g125_dal_special_ibdne"]#
+labels = ["Real matched", "IBDNe"]#
+EM_dirs = ["EM/real_matched/boxplots", "EM/ibdne/boxplots"]#
+true_maxes = [9715,26205] #ibdne estimated as harmonic mean of ibdne_raw.txt
 
 ###### DO NOT MODIFY
 
@@ -44,13 +47,11 @@ num_batches = 25
 
 Nes_space = np.geomspace(2000, 100000, 5000)
 
-#true_maxes = [2500, 10000, 40000]#, 9715]
-true_maxes = [9715, 26205] #ibdne estimated as harmonic mean of ibdne_raw.txt
 
 
 
 assert len(true_maxes) == len(prefixes)
-tick_labels = [f"{true_maxes[i]}\n({labels[i]})" for i in range(len(true_maxes))]
+tick_labels = deepcopy(true_maxes)
 
 all_ests = []
 all_labels = []
@@ -59,7 +60,8 @@ for p_i, prefix in enumerate(prefixes):
         Ne_lls = np.zeros_like(hmm_Nes, dtype=float)
         condo_lls = np.zeros_like(hmm_Nes, dtype=float)
         for Ne_i, hmm_Ne in enumerate(hmm_Nes):
-            em_path = Path(f"{EM_dirs[p_i]}/neutral_{prefix}_seed{100+i}_HMMNe{hmm_Ne}_cond_{run_type}_EM.pkl")
+            seed = 100+i
+            em_path = Path(f"{EM_dirs[p_i]}/neutral_{prefix}_seed{seed}_HMMNe{hmm_Ne}_cond_{run_type}_EM.pkl")
             with open(em_path, "rb") as file:
                 hf = pickle.load(file)
             uncondo_sum = hf["neutral_ll"].sum()
@@ -79,18 +81,14 @@ for p_i, prefix in enumerate(prefixes):
         all_ests.append(Nes_space[np.argmax(condo_spline_output)])
         all_labels.append(labels[p_i])
 
-print(all_ests)
-
 massaged_data = zip(all_ests, all_labels)
 data_df = pd.DataFrame(massaged_data, columns=[r"$\hat{N}_e$", "Dataset"])
 
-
-
-all_frac_ests = [all_ests[i]/true_maxes[i] for i in range(len(true_maxes))]
 box_lws = .7
 fig, axs = plt.subplots(1,1,figsize=(3.1,3.1),layout="constrained")
 axs.set_yscale("log")
 axs.set_yticks(true_maxes)
+axs.set_yticklabels(tick_labels)
 for true_max in true_maxes:
     axs.axhline(true_max, color="r", ls="--", lw=1)
 sns.boxplot(data=data_df, y=r"$\hat{N}_e$", x="Dataset", hue="Dataset", ax=axs, widths=.4, boxprops={"lw": box_lws},
@@ -100,5 +98,9 @@ axs.set_yticks(true_maxes)
 axs.get_yaxis().set_major_formatter(ScalarFormatter())
 axs.set_ylabel(r"$\hat{N}_e$")
 axs.set_xlabel("Dataset")
+
+if "IBDNe" in labels:
+    ibdneloc = labels.index("IBDNe")
+    axs.get_yticklabels()[ibdneloc].set_color("red")
 fig.savefig(Path(output_dir)/f"condo_batch_boxplots_final.pdf", format="pdf", bbox_inches="tight")
 plt.close(fig)

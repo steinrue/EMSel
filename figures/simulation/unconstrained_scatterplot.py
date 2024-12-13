@@ -38,11 +38,13 @@ colorlist = ["#1D6996", *[coolormap(i) for i in [1,0]], colors[3], colors[4]]
 init_colorlist = colorlist
 plt.rcParams["axes.prop_cycle"] = cycler(color=colorlist)
 
-sel_types = ["neutral", "add", "dom", "rec", "over", "under"]
-cond_types = ["neutral", "add", "dom", "rec"]
+sel_types = ["add", "dom", "rec", "over", "under"]
 
-sel_coords_1 = [0, 0.025, 0.05, 0, 0.05, -0.05]
-sel_coords_2 = [0, 0.05, 0.05, 0.05, 0, 0]
+sel_coords_1 = [0.025, 0.05, 0, 0.05, -0.05]
+sel_coords_2 = [0.05, 0.05, 0.05, 0, 0]
+
+assert len(sel_coords_1) == len(sel_coords_2)
+assert len(sel_coords_1) == len(sel_types)
 
 run_types = ["add", "dom", "rec", "het"]
 colorlist = init_colorlist
@@ -66,7 +68,7 @@ for n_i, num_gens in enumerate(num_gens_list):
         min_quantile = 0
         max_quantile = 0
         runtime_total = 0
-        i = -1
+        i = 0
         for sel_type, sel_str in itprod(sel_types, sel_strs):
             pdict = {"sel_type": sel_type, "num_gens": num_gens, "sel_str": sel_str, "init_dist": init_dist}
             exp_name = params_dict_to_str(**pdict)
@@ -79,7 +81,7 @@ for n_i, num_gens in enumerate(num_gens_list):
                 hf = pickle.load(file)
 
             axs.scatter(hf["full_run"]["s_final"][0,:], hf["full_run"]["s_final"][1,:], color=colorlist[i] if i >= 0 else "black", s=5, label=convert_from_abbrevs(sel_type))
-            axs.plot(sel_coords_1[i+1], sel_coords_2[i+1], ls=None, marker="*", ms=10, color=colorlist[i] if i >= 0 else "black", zorder=3, markeredgewidth=.75, markeredgecolor="k" if i>=0 else "r")
+            axs.plot(sel_coords_1[i], sel_coords_2[i], ls=None, marker="*", ms=10, color=colorlist[i] if i >= 0 else "black", zorder=3, markeredgewidth=.75, markeredgecolor="k" if i>=0 else "r")
             i += 1
             #pf = np.loadtxt(pd_filename, delimiter="\t")
         axs.axhline(lw=1.5, color="k")

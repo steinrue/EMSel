@@ -84,7 +84,7 @@ for type_i, run_type in enumerate(sel_types):
                 sf = pickle.load(file)
             sf_run_ll = sf[f"add_run"]["ll_final"]
             sf_llr = 2*(sf_run_ll-sf["neutral_ll"])
-            print(f"{nn_fname} {run_type} stats: {np.min(sf_llr):.4f} {(sf_llr < 0).sum()}")
+            #print(f"{nn_fname} {run_type} stats: {np.min(sf_llr):.4f} {(sf_llr < 0).sum()}")
         nn_llr = sf_llr
         nn_p_vals = -chisq_sl_fit.logsf(nn_llr)/np.log(10)
         roc_FPR, roc_TPR, auc = get_roc_and_auc(np.power(10, -full_p_vals), np.power(10, -nn_p_vals))
@@ -149,7 +149,7 @@ for type_i, run_type in enumerate(sel_types):
                 sf = pickle.load(file)
             sf_run_ll = sf[f"{run_EM_str}_run"]["ll_final"]
             sf_llr = 2*(sf_run_ll-sf["neutral_ll"])
-            print(f"{nn_fname} {run_type} stats: {np.min(sf_llr):.4f} {(sf_llr < 0).sum()}")
+            #print(f"{nn_fname} {run_type} stats: {np.min(sf_llr):.4f} {(sf_llr < 0).sum()}")
         nn_llr = sf_llr
         nn_p_vals = -chisq_sl_fit.logsf(nn_llr)/np.log(10)
         roc_FPR, roc_TPR, auc = get_roc_and_auc(np.power(10, -full_p_vals), np.power(10, -nn_p_vals))

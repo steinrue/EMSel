@@ -24,7 +24,7 @@ data_dir = "data"
 EM_dir = "EM"
 output_dir = "output"
 genodata_type = "capture_only"
-classification_types = ["add", "dom", "het", "rec"]
+classification_types = ["add", "dom", "het", "rec", "full"]
 ```
 
 ## Figures 12, 13A, S.23-25, (S.29-36)A, Table 1*, Tables S.1-S.3*

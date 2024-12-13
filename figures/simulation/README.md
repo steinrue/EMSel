@@ -179,7 +179,7 @@ output_dir = "output/ibdne"
 ```
 
 ### Figure 9D+10:
-First, fit the generalized gamma distribution to the bootstrapped dataset. To do this, set the following parameters at the beginning of the script `extract_means.py` and run it using `python extract.py`:
+First, fit the generalized gamma distribution to the bootstrapped dataset. To do this, set the following parameters at the beginning of the script `extract_means.py` and run it using `python extract_means.py`:
 ```
 num_gens_list = [125]
 init_dists = ["real_special"]

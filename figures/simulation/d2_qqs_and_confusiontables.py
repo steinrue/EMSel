@@ -17,20 +17,20 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101,251,1001]
 init_dists = [.005, .25, "recip"]
 
-num_gens_list = [125]
-init_dists = ["real_special"]
+#num_gens_list = [125]
+#init_dists = ["real_special"]
 
-EM_dir = "EM/ibdne"
+EM_dir = "EM/pure_sim"
+output_dir = "output/pure_sim"
 classified_dir = "classified"
-output_dir = "output/ibdne"
 
 ###### DO NOT MODIFY
 
 if "matched" in EM_dir:
-    EM_suffix = "Ne9987_"
+    EM_suffix = "Ne10496_"
     output_suffix = "real_matched_"
 elif "ibdne" in EM_dir:
-    EM_suffix = "Ne35119_"
+    EM_suffix = "Ne35313_"
     output_suffix = "ibdne_"
 else:
     EM_suffix = ""
@@ -83,7 +83,7 @@ for num_gens in num_gens_list:
         with open(neutral_data_path, "rb") as file:
             nf_data = pickle.load(file)
 
-        gengamma_path = Path(f"{output_dir}/{neutral_filename}_{output_suffix}gengamma_perm_fit.pkl")
+        gengamma_path = Path(f"{output_dir}/{neutral_filename}_{output_suffix}gengamma_resim_fit.pkl")
         n_ll_array_data = get_llg_array(nf_data, onep_types, classify_full_run(nf_data["full_run"]["s_final"])[0])[:, :, np.newaxis]
         n_llr_data = 2*(nf_data["full_run"]["ll_final"]-nf_data["neutral_ll"])
         n_hs_data = nf_data["het_run"]["s_final"][0, :][:, np.newaxis]
@@ -120,7 +120,6 @@ for num_gens in num_gens_list:
 
         with open(gengamma_path, "rb") as file:
             gengamma_dict = pickle.load(file)
-
 
         nk_array_data = get_llgka_array(n_ll_array_data, k_opt, 0)
         med_p_vals = np.zeros_like(n_llr_data)
@@ -238,7 +237,6 @@ for num_gens in num_gens_list:
         colors = [colorlist[2], "#861A5E", colorlist[0]]
         axins = axs.inset_axes([.65, .11, .3, .3])
         axs.text(-.2, .97, r"$\bf{D}$", fontsize=13, transform=axs.transAxes)
-        thinning = init_dist == "real_special"
-        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=thinning)
-        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}d2_all.pdf"), format="pdf", bbox_inches="tight")
+        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=True, rasterized=True)
+        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}d2_all_rasterized.pdf"), format="pdf", bbox_inches="tight", dpi=600)
         plt.close(fig)

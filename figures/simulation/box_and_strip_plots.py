@@ -14,15 +14,15 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
-num_gens_list = [125]
-init_dists = ["real_special"]
+#num_gens_list = [125]
+#init_dists = ["real_special"]
 
 #set to True for strip plots (e.g. Figure 6)
 cond_only = False
 
-data_dir = "data/ibdne"
-EM_dir = "EM/ibdne"
-output_dir = "output/ibdne"
+data_dir = "data/pure_sim"
+EM_dir = "EM/pure_sim"
+output_dir = "output/pure_sim"
 classified_dir = "classified"
 
 
@@ -30,10 +30,10 @@ classified_dir = "classified"
 ####### DO NOT MODIFY
 
 if "matched" in EM_dir:
-    EM_suffix = "Ne9987_"
+    EM_suffix = "Ne10496_"
     output_suffix = "real_matched_"
 elif "ibdne" in EM_dir:
-    EM_suffix = "Ne35119_"
+    EM_suffix = "Ne35313_"
     output_suffix = "ibdne_"
 else:
     EM_suffix = ""
@@ -61,9 +61,12 @@ run_types = ["add", "dom", "rec", "het"]
 iter_types = cond_types if cond_only else sel_types
 
 max_num_pts = 1000
+max_q = .9987 if cond_only else .99
 
 for n_i, num_gens in enumerate(num_gens_list):
-     for d_i, init_dist in enumerate(init_dists):
+    for d_i, init_dist in enumerate(init_dists):
+        if "pure_sim" in EM_dir and cond_only and not (num_gens == 251 and init_dist == .25):
+            continue
         if init_dist in [.005, "recip"] and not cond_only:
             colorlist = ["#1D6996", coolormap(1), colors[3], colors[4]]
             plt.rcParams["axes.prop_cycle"] = cycler(color=colorlist)
@@ -119,7 +122,7 @@ for n_i, num_gens in enumerate(num_gens_list):
 
             pf = np.loadtxt(pd_filename, delimiter="\t")
 
-            num_pts = hf["neutral_ll"].shape[0]
+            num_pts = min(hf["neutral_ll"].shape[0], max_num_pts)
             if cond_only:
                 with open(bh_filename, "rb") as file:
                     bf = pickle.load(file)
@@ -157,7 +160,7 @@ for n_i, num_gens in enumerate(num_gens_list):
                     exit_codes = hf[f"{run_type}_run"]["exit_codes"]
                     s_data = get_1d_s_data_from_type(hf[f"{run_type}_run"]["s_final"][:, idx_list[:num_pts]], run_type)
                     if s_data.shape[0] > 0:
-                        max_quantile = max(max_quantile, np.quantile(s_data, .99))
+                        max_quantile = max(max_quantile, np.quantile(s_data, max_q))
                         min_quantile = min(min_quantile, np.quantile(s_data, .01))
                     s_vals.extend(s_data.tolist())
                     s_types.extend([f"{run_type_val}"] * num_pts)
@@ -166,19 +169,19 @@ for n_i, num_gens in enumerate(num_gens_list):
                 if sel_type == "under":
                     s_data = get_1d_s_data_from_type(-hf[f"het_run"]["s_final"][:, idx_list[:num_pts]], sel_type)
                     if s_data.shape[0] > 0:
-                        max_quantile = max(max_quantile, np.quantile(s_data, .99))
+                        max_quantile = max(max_quantile, np.quantile(s_data, max_q))
                         min_quantile = min(min_quantile, np.quantile(s_data, .01))
                     s_vals.extend(s_data.tolist())
                 elif sel_type == "over":
                     s_data = get_1d_s_data_from_type(hf[f"het_run"]["s_final"][:, idx_list[:num_pts]], sel_type)
                     if s_data.shape[0] > 0:
-                        max_quantile = max(max_quantile, np.quantile(s_data, .99))
+                        max_quantile = max(max_quantile, np.quantile(s_data, max_q))
                         min_quantile = min(min_quantile, np.quantile(s_data, .01))
                     s_vals.extend(s_data.tolist())
                 else:
                     s_data = get_1d_s_data_from_type(hf[f"{sel_type}_run"]["s_final"][:, idx_list[:num_pts]], sel_type)
                     if s_data.shape[0] > 0:
-                        max_quantile = max(max_quantile, np.quantile(s_data, .99))
+                        max_quantile = max(max_quantile, np.quantile(s_data, max_q))
                         min_quantile = min(min_quantile, np.quantile(s_data, .01))
                     s_vals.extend(s_data.tolist())
                     if cond_only and fake_one:
@@ -188,9 +191,10 @@ for n_i, num_gens in enumerate(num_gens_list):
 
         s_types = convert_from_abbrevs(s_types, shortall=True)
         massaged_data = zip(s_vals, s_strs, s_types)
+        min_quantile = min(min_quantile, -.01)
         s_stuff = pd.DataFrame(data=massaged_data, columns=[r"$\hat{s}$", r"True $s$", "Mode of selection"])
         if cond_only:
-            box = sns.stripplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True,ax=axs, size=2)
+            box = sns.stripplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True,ax=axs, size=2, rasterized=True)
             counts = []
             y_locs = []
             x_locs = []
@@ -204,14 +208,14 @@ for n_i, num_gens in enumerate(num_gens_list):
                         y_locs.append(-1)
                     x_locs.append(s_i+(m_i-1)*.28)
                     if counts[-1] > 99:
-                        x_locs[-1] += (m_i-1)*.1
+                        x_locs[-1] += (m_i-1)*.09
             y_locs[0] = y_locs[1]
             for y_i in range(len(y_locs)):
                 if y_i%3==2:
                     max_yi = min(max(y_locs[y_i], y_locs[y_i-1], y_locs[y_i-2]), max_quantile)
                     y_locs[y_i] = y_locs[y_i-1] = y_locs[y_i-2] = max_yi*1.05
             for c_i, count in enumerate(counts):
-                axs.text(x_locs[c_i], y_locs[c_i], str(count), ha="center", va="bottom", color=colorlist[c_i%3], size=7)
+                axs.text(x_locs[c_i], y_locs[c_i], str(count), ha="center", va="bottom", color=colorlist[c_i%3], size=7, bbox=dict(facecolor="white",pad=-0.1, edgecolor='none', alpha=0.75))
         else:
             box = sns.boxplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True, width=.75,
                   ax=axs,fliersize=1, boxprops={"lw": .5}, medianprops={"lw": .5}, whiskerprops={"lw": .5},
@@ -239,5 +243,5 @@ for n_i, num_gens in enumerate(num_gens_list):
             for handle in lgd.legend_handles:
                 handle.set_markersize(4)
         axs.set_ylim([min_quantile, max_quantile])
-        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{output_suffix}{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight")
+        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{output_suffix}{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight", dpi=600)
         plt.close(fig)

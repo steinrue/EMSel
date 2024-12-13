@@ -23,8 +23,8 @@ output_dir = "output/pure_sim"
 file_strs = ["ns100_linear_", "linear_", "fixed_ic_", ""]
 blank_name_str = "standard_"
 
-# file_strs = ["Ne5000_", "", "Ne20000_"]
-# blank_name_str = "Ne10000_"
+#file_strs = ["Ne5000_", "", "Ne20000_"]
+#blank_name_str = "Ne10000_"
 
 ####### DO NOT MODIFY
 
@@ -48,6 +48,8 @@ cond_types = ["neutral", "add", "dom", "rec"]
 
 run_types = ["add", "dom", "rec", "het"]
 iter_types = sel_types
+
+num_pts = 1000
 
 for file_i, file_str in enumerate(file_strs):
     fig, axs = plt.subplots(1, 1, figsize=(3.1, 3.1), layout="constrained")
@@ -99,8 +101,6 @@ for file_i, file_str in enumerate(file_strs):
 
         with open(pdata_filename, "rb") as file:
             pdict = pickle.load(file)
-
-        num_pts = hf["samples_mask"].sum()
         idx_list = np.arange(num_pts)
         if sel_type == "neutral":
             for run_type in run_types:
@@ -108,8 +108,6 @@ for file_i, file_str in enumerate(file_strs):
                     run_type_val = run_type
                 else:
                     run_type_val = "over"
-                if run_type == "rec" and init_dist in [.005, "recip"]:
-                    continue
                 exit_codes = hf[f"{run_type}_run"]["exit_codes"]
                 illegal_s += exit_codes[exit_codes == 2].sum()
                 illegal_s += exit_codes[exit_codes == 4].sum()
@@ -146,6 +144,7 @@ for file_i, file_str in enumerate(file_strs):
     s_types = convert_from_abbrevs(s_types, shortall=True)
 
     massaged_data = zip(s_vals, s_strs, s_types)
+    min_quantile = min(min_quantile, -.01)
 
     s_stuff = pd.DataFrame(data=massaged_data, columns=[r"$\hat{s}$", r"True $s$", "Mode of selection"])
     box = sns.boxplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True, width=.75,

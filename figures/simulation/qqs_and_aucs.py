@@ -15,19 +15,19 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
-num_gens_list = [125]
-init_dists = ["real_special"]
+#num_gens_list = [125]
+#init_dists = ["real_special"]
 
-EM_dir = "EM/ibdne"
-output_dir = "output/ibdne"
+EM_dir = "EM/pure_sim"
+output_dir = "output/pure_sim"
 
 ###### DO NOT MODIFY
 
 if "matched" in EM_dir:
-    EM_suffix = "Ne9987_"
+    EM_suffix = "Ne10496_"
     output_suffix = "real_matched_"
 elif "ibdne" in EM_dir:
-    EM_suffix = "Ne35119_"
+    EM_suffix = "Ne35313_"
     output_suffix = "ibdne_"
 else:
     EM_suffix = ""
@@ -116,9 +116,9 @@ for num_gens in num_gens_list:
                     continue
                 logps.append(full_p_vals)
                 labels.append(convert_from_abbrevs(run_EM_str, shorthet=True))
-            thinning = init_dist == "real_special"
-            plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning)
-            fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}llr_all.pdf"), format="pdf", bbox_inches="tight")
+            thinning = True
+            plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning, rasterized=True)
+            fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}llr_all_rasterized.pdf"), format="pdf", bbox_inches="tight")
             plt.close(fig)
 
             big_ts_dict = {}
@@ -136,5 +136,5 @@ for num_gens in num_gens_list:
             axs2.set_xlabel(r"$\bf{s}$", fontsize=10)
             axs2.xaxis.set_label_position('top')
             axs2.set_ylabel(r"$\bf{Mode}$", fontsize=10)
-            fig2.savefig(f"{output_dir}/{big_ts_str}_{output_suffix}auc_plot.pdf", format="pdf", bbox_inches="tight")
+            fig2.savefig(f"{output_dir}/{big_ts_str}_{output_suffix}auc_plot.pdf", format="pdf", bbox_inches="tight", dpi=600)
             plt.close(fig2)

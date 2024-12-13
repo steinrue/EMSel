@@ -2,12 +2,12 @@ from pathlib import Path
 import numpy as np
 
 ###### MODIFY
-EM_dir = Path('EM/ibdne')
-data_dir = Path('data/ibdne')
+EM_dir = Path('EM/real_matched/')
+data_dir = Path('data/real_matched/')
 
 qsub_dir = Path('qsubs')
 max_run_hours = 5
-num_cores = 30
+num_cores = 10
 huge_mem_required = 50
 large_mem_required = 20
 small_mem_required = 10

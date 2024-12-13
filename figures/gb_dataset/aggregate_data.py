@@ -78,6 +78,7 @@ for chrom in chroms:
     agg_data["neutral_ll"] = neutral_ll
     for classification_type in classification_types:
         if classification_type == "full":
+            # to be overwritten by add_full_agg.py
             agg_data[f"{classification_type}_ll_vals"] = np.zeros_like(agg_data["pos"])
             agg_data[f"{classification_type}_p_vals"] = np.zeros_like(agg_data["pos"])
             agg_data[f"{classification_type}_s_vals"] = hf[f"{classification_type}_run"]["s_final"].T

@@ -59,6 +59,7 @@ min_quantile = 0
 max_quantile = 0
 runtime_total = 0
 illegal_s = 0
+num_pts = 1000
 for sel_type, sel_str in itprod(iter_types, sel_strs):
     pdict = {"sel_type": sel_type, "num_gens": num_gens, "sel_str": sel_str, "init_dist": init_dist}
     exp_name = params_dict_to_str(**pdict)
@@ -90,7 +91,6 @@ for sel_type, sel_str in itprod(iter_types, sel_strs):
     with open(pdata_filename, "rb") as file:
         pdict = pickle.load(file)
 
-    num_pts = hf["neutral_ll"].shape[0]
     idx_list = np.arange(num_pts)
 
     if sel_type == "neutral":
@@ -115,6 +115,7 @@ for sel_type, sel_str in itprod(iter_types, sel_strs):
 s_types = convert_from_abbrevs(s_types, shortall=True)
 
 massaged_data = zip(s_vals, s_strs, s_types)#
+min_quantile = min(min_quantile, -.01)
 
 s_stuff = pd.DataFrame(data=massaged_data, columns=[r"$\hat{s}$", r"True $s$", "Mode of selection"])
 box = sns.boxplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True, width=.75,
@@ -185,8 +186,6 @@ for sel_type, sel_str in itprod(["neutral", "add"], sel_strs):
     with open(pdata_filename, "rb") as file:
         pdict = pickle.load(file)
 
-    num_pts = hf["neutral_ll"].shape[0]
-    idx_list = np.arange(num_pts)
     if sel_type == "neutral":
         for run_type in run_types:
             if run_type != "het":
@@ -213,6 +212,7 @@ for sel_type, sel_str in itprod(["neutral", "add"], sel_strs):
 s_types = convert_from_abbrevs(s_types, shortall=True)
 
 massaged_data = zip(s_vals, s_strs, s_types)#
+min_quantile = min(min_quantile, -.01)
 
 s_stuff = pd.DataFrame(data=massaged_data, columns=[r"$\hat{s}$", r"True $s$", "Mode of selection"])
 box = sns.boxplot(data=s_stuff, x=r"True $s$", y=r"$\hat{s}$", hue="Mode of selection", dodge=True, width=.75,

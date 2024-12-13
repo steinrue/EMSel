@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 ###### MODIFY
 
-EM_dir = "EM/real_matched/permutations"
+EM_dir = "EM/ibdne"
 
 ###### DO NOT MODIFY
 
