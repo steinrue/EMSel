@@ -36,7 +36,7 @@ An example of a properly-formatted CSV is available in `sample_datasets/add_s025
 
 ### Using EMSEL with VCFs
 
-Any VCF that can be read by `scikit-allele`, it can be used with EMSel. Using EMSel with a VCF additionally requires a file containing the same strings as the `samples` key in the VCF and a corresponding sampling time (in years or generations, see the -ytg flag below) for each sample.
+Any VCF that can be read by `scikit-allele` (including .vcf.gz files) can be used with EMSel. Using EMSel with a VCF additionally requires a file containing the same strings as the `samples` key in the VCF and a corresponding sampling time (in years or generations, see the -ytg flag below) for each sample.
 
 ### Minimal example and output
 
