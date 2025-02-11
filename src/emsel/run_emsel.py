@@ -140,9 +140,16 @@ def main():
     hmm_dd["samples_mask"] = combo_mask
     hmm_dd["samples_idxs"] = np.where(combo_mask)[0]
 
-    if pd_path.suffix == ".vcf" and args.save_csv:
-        np.savetxt(pd_path.with_suffix(".csv"), full_array[combo_mask, :], delimiter="\t", fmt="%d",
+    if args.save_csv:
+        csv_path = ""
+        if pd_path.suffix == ".vcf":
+            csv_path = pd_path.with_suffix(".csv")
+        elif pd_path.suffixes == [".vcf", ".gz"]:
+            csv_path = pd_path.with_suffix('').with_suffix(".csv")
+        if csv_path:
+            np.savetxt(csv_path, full_array[combo_mask, :], delimiter="\t", fmt="%d",
                    header="Each row = one replicate; each set of three columns = (sampling time; total samples; derived alleles)")
+            print(f"Saved .csv to {csv_path}!")
 
     if pd_path.suffix == ".vcf" and args.full_output:
         hmm_dd["pos"] = vcf_file["variants/POS"][combo_mask]

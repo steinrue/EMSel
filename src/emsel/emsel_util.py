@@ -332,7 +332,7 @@ def vcf_to_useful_format(vcf_file, sample_times_file, years_per_gen=28.1, force=
     correct_order_idxs = vcf_file["samples"].argsort().argsort()
     sample_times_ordered = sample_times_ordered[correct_order_idxs, :]
     sample_times, sample_idxs = np.unique(sample_times_ordered[:, 1], return_inverse=True)
-    chroms = vcf_file["variants/CHROM"].astype(int)
+    num_snps = vcf_file["calldata/GT"].shape[0]
     locus_list_list = []
 
     #if we're doing genome-wide thresholds?
@@ -342,28 +342,24 @@ def vcf_to_useful_format(vcf_file, sample_times_file, years_per_gen=28.1, force=
             raise TypeError("VCF call data is all homozygotes - must use --force [haploid/diploid]!")
         elif force == "haploid":
             vcf_file["calldata/GT"][:, :, 1] = -1
-    big_final_table = np.zeros((1, sample_times.shape[0]*3))
-    for chrom in np.unique(chroms):
-        print(chrom)
-        final_table = np.zeros(((chroms == chrom).sum(), sample_times.shape[0]*3))
-        for sample_i, sample_time in enumerate(sample_times):
-            sample_indices = np.where(sample_i == sample_idxs)[0]
-            sample_time_indices = np.where(sample_time == sample_times)[0]
-            assert (vcf_file['samples'][sample_indices] == sample_times_ordered[sample_indices, 0]).all()
-            relevant_calls_nd = np.squeeze(vcf_file["calldata/GT"][:, sample_indices, :])
-            num_samples_nd = np.sum(relevant_calls_nd >= 0, axis=-1)
-            num_zeros_nd = np.sum(relevant_calls_nd == 0, axis=-1)
-            if relevant_calls_nd.ndim > 2:
-                num_samples_nd = np.sum(num_samples_nd, axis=1)
-                num_zeros_nd = np.sum(num_zeros_nd, axis=1)
-            final_data_nd = num_samples_nd - num_zeros_nd
-            final_table[:, sample_i*3+1] = num_samples_nd.astype(int)
-            final_table[:, sample_i*3+2] = final_data_nd.astype(int)
-        final_table[:, ::3] = (max_sample_time - sample_times[::-1]).astype(int)
-        final_table[:, 1::3] = final_table[:, 1::3][:, ::-1]
-        final_table[:, 2::3] = final_table[:, 2::3][:, ::-1]
-        big_final_table = np.vstack((big_final_table, final_table))
-    return big_final_table[1:, :]
+    big_final_table = np.zeros((num_snps, sample_times.shape[0]*3))
+    for sample_i, sample_time in enumerate(sample_times):
+        sample_indices = np.where(sample_i == sample_idxs)[0]
+        sample_time_indices = np.where(sample_time == sample_times)[0]
+        assert (vcf_file['samples'][sample_indices] == sample_times_ordered[sample_indices, 0]).all()
+        relevant_calls_nd = np.squeeze(vcf_file["calldata/GT"][:, sample_indices, :])
+        num_samples_nd = np.sum(relevant_calls_nd >= 0, axis=-1)
+        num_zeros_nd = np.sum(relevant_calls_nd == 0, axis=-1)
+        if relevant_calls_nd.ndim > 2:
+            num_samples_nd = np.sum(num_samples_nd, axis=1)
+            num_zeros_nd = np.sum(num_zeros_nd, axis=1)
+        final_data_nd = num_samples_nd - num_zeros_nd
+        big_final_table[:, sample_i*3+1] = num_samples_nd.astype(int)
+        big_final_table[:, sample_i*3+2] = final_data_nd.astype(int)
+    big_final_table[:, ::3] = (max_sample_time - sample_times[::-1]).astype(int)
+    big_final_table[:, 1::3] = big_final_table[:, 1::3][:, ::-1]
+    big_final_table[:, 2::3] = big_final_table[:, 2::3][:, ::-1]
+    return big_final_table
 
 
 def full_bh_procedure(llgka_list, fitted_dist, lr_shift, alpha, bh=True):
