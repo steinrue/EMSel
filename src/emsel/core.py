@@ -499,7 +499,11 @@ class HMM:
                 self.ll_final[i, 0] = run_result[2][run_result[2] < 0][-1]
             else:
                 self.ll_final[i, 0] = run_result[2]
-        return self.s_history, self.s_final, self.ll_history if save_history else self.ll_final, self.init_params_array, self.itercount_array, self.exit_codes
+        if save_history:
+            self.s_history = self.s_history.squeeze()
+            self.ll_history = self.ll_history.squeeze()
+        self.ll_final = self.ll_final.squeeze()
+        return self.s_history, self.s_final, self.ll_history if save_history else self.ll_final, self.init_params_array.squeeze(), self.itercount_array.squeeze(), self.exit_codes.squeeze()
 
     def compute_multiple_ll(self, s1, s2, data_matrix, init_states=None):
         sample_locs_array = data_matrix[:, ::3]
