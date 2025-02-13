@@ -203,12 +203,12 @@ def main():
             s_hist, s_final, ll_hist, ic_dist, itercount_hist, exit_codes = iter_hmm.compute_s(hmm_data["final_data"], hmm_data["num_samples"], hmm_data["sample_times"],
                                                                         sel_type, hmm_dd["ic_update_type"], hmm_dd["tol"], hmm_dd["max_iter"], progressbar=args.progressbar, data_mean= hmm_dd["init_cond"] == "data_mean", save_history = args.save_history)
             hmm_dict = {
-                "s_hist": s_hist.squeeze(),
-                "s_final": s_final.squeeze(),
-                "ll_hist": ll_hist.squeeze(),
-                "ic_dist": ic_dist.squeeze(),
-                "itercount_hist": itercount_hist.squeeze(),
-                "exit_codes": exit_codes.squeeze()
+                "s_hist": s_hist,
+                "s_final": s_final,
+                "ll_hist": ll_hist,
+                "ic_dist": ic_dist,
+                "itercount_hist": itercount_hist,
+                "exit_codes": exit_codes
             }
         if args.compute_cond and sel_type == "neutral":
             data_matrix = np.zeros((len(hmm_data["final_data"]), len(hmm_data["final_data"][0])*3), dtype=int)
