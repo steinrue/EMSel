@@ -405,7 +405,7 @@ def bh_procedure_2(full_llrs_list, llgka_list, fitted_dist, lr_shift, alpha, bh=
             temp_log_p_vals = -np.log10(temp_p_vals)
         else:
             temp_p_vals = 1 - fitted_dist.cdf(temp_llrs)
-            temp_log_p_vals = -chisq_dist.logsf(temp_llrs)/np.log(10)
+            temp_log_p_vals = -fitted_dist.logsf(temp_llrs)/np.log(10)
         p_vals.append(temp_p_vals)
         log_p_vals.append(temp_log_p_vals)
 
