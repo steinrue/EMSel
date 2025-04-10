@@ -396,14 +396,18 @@ def full_bh_procedure(llgka_list, fitted_dist, lr_shift, alpha, bh=True):
 
 def bh_procedure_2(full_llrs_list, llgka_list, fitted_dist, lr_shift, alpha, bh=True):
     p_vals = []
+    log_p_vals = []
     for temp_llrs in full_llrs_list:
         temp_p_vals = np.zeros_like(temp_llrs)
         if lr_shift > 0:
             temp_p_vals[temp_llrs > lr_shift] = (1 - fitted_dist.cdf(temp_llrs[temp_llrs > lr_shift] - lr_shift)) / 2
             temp_p_vals[temp_llrs <= lr_shift] = np.clip(1 - temp_llrs[temp_llrs <= lr_shift] / (2 * lr_shift), .5, 1)
+            temp_log_p_vals = -np.log10(temp_p_vals)
         else:
             temp_p_vals = 1 - fitted_dist.cdf(temp_llrs)
+            temp_log_p_vals = -chisq_dist.logsf(temp_llrs)/np.log(10)
         p_vals.append(temp_p_vals)
+        log_p_vals.append(temp_log_p_vals)
 
     flat_p_vals = np.zeros(1)
     for p_val_array in p_vals:
@@ -427,7 +431,7 @@ def bh_procedure_2(full_llrs_list, llgka_list, fitted_dist, lr_shift, alpha, bh=
                                                                       axis=1) + 1
             p_idx += classified_array.shape[0]
         classified_array_list.append(classified_array)
-    return BH_line, p_vals, classified_array_list
+    return BH_line, p_vals, log_p_vals, classified_array_list
 
 
 def bh_correct(p_values, alpha, yekutieli=False):
