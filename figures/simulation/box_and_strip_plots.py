@@ -14,11 +14,11 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
-#num_gens_list = [125]
-#init_dists = ["real_special"]
+# num_gens_list = [125]
+# init_dists = ["real_special"]
 
 #set to True for strip plots (e.g. Figure 6)
-cond_only = False
+cond_only = True
 
 data_dir = "data/pure_sim"
 EM_dir = "EM/pure_sim"
@@ -147,7 +147,7 @@ for n_i, num_gens in enumerate(num_gens_list):
 
                     if cond_only:
                         if run_type in ["add", "dom", "rec"]:
-                            idx_list = np.where(bf["bh_classes"] == sel_types.index(run_type))[0]
+                            idx_list = np.where(bf["bh_classes"][:max_num_pts] == sel_types.index(run_type))[0]
                             num_pts = idx_list.shape[0]
                             if run_type == "add" and num_pts == 0:
                                 s_vals.extend([10])
@@ -243,5 +243,5 @@ for n_i, num_gens in enumerate(num_gens_list):
             for handle in lgd.legend_handles:
                 handle.set_markersize(4)
         axs.set_ylim([min_quantile, max_quantile])
-        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{output_suffix}{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight", dpi=600)
+        plt.savefig(f"{output_dir}/g{num_gens}_d{init_dist}_{output_suffix}{'strip' if cond_only else 'box'}plots.pdf", format="pdf", bbox_inches="tight", dpi=300)
         plt.close(fig)

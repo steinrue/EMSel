@@ -5,9 +5,8 @@ from pathlib import Path
 import pickle
 from emsel.emsel_util import classify_full_run, correct_for_het, get_one_count_matrix, params_dict_to_str, get_llg_array, get_lr_statistic, get_llgka_array, full_bh_procedure, bh_procedure_2, convert_from_abbrevs, convert_to_abbrevs, plot_qq
 from copy import deepcopy
-from scipy.stats import chi2, gengamma
+from scipy.stats import chi2
 from pandas import DataFrame
-from scipy.signal import savgol_filter
 import seaborn as sns
 from cycler import cycler
 
@@ -17,14 +16,22 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101,251,1001]
 init_dists = [.005, .25, "recip"]
 
-#num_gens_list = [125]
-#init_dists = ["real_special"]
+# num_gens_list = [125]
+# init_dists = ["real_special"]
 
 EM_dir = "EM/pure_sim"
 output_dir = "output/pure_sim"
 classified_dir = "classified"
 
 ###### DO NOT MODIFY
+
+def get_maxbased_llr(hf, onep_types, uncon=False):
+    temp_lls = np.zeros_like(hf["neutral_ll"]) - np.inf
+    for onep_run in onep_types:
+        temp_lls = np.maximum(temp_lls, hf[f"{onep_run}_run"]["ll_final"])
+    if uncon:
+        temp_lls = np.maximum(temp_lls, hf["full_run"]["ll_final"]-1)
+    return 2*(temp_lls-hf["neutral_ll"])
 
 if "matched" in EM_dir:
     EM_suffix = "Ne10496_"
@@ -61,8 +68,10 @@ update_types = [*onep_types, "full"]
 final_sel_types = ["add", "dom", "rec", "over", "under"]
 
 p_val = .05
-k_opt = 1
+k_opt = np.inf
 save_bh = True
+
+
 
 bigtable_idxs = []
 full_bigtable_list = []
@@ -83,9 +92,8 @@ for num_gens in num_gens_list:
         with open(neutral_data_path, "rb") as file:
             nf_data = pickle.load(file)
 
-        gengamma_path = Path(f"{output_dir}/{neutral_filename}_{output_suffix}gengamma_resim_fit.pkl")
         n_ll_array_data = get_llg_array(nf_data, onep_types, classify_full_run(nf_data["full_run"]["s_final"])[0])[:, :, np.newaxis]
-        n_llr_data = 2*(nf_data["full_run"]["ll_final"]-nf_data["neutral_ll"])
+        n_llr_data = get_maxbased_llr(nf_data, onep_types, uncon=False)
         n_hs_data = nf_data["het_run"]["s_final"][0, :][:, np.newaxis]
         final_sel_types = ["add", "dom", "rec", "over", "under"]
         for sel_str in sel_strs:
@@ -118,14 +126,8 @@ for num_gens in num_gens_list:
             llrs_data.append(g_llr_data)
             hs_data.append(np.vstack(hs_list_data).T)
 
-        with open(gengamma_path, "rb") as file:
-            gengamma_dict = pickle.load(file)
 
         nk_array_data = get_llgka_array(n_ll_array_data, k_opt, 0)
-        med_p_vals = np.zeros_like(n_llr_data)
-        med_p_vals[n_llr_data > gengamma_dict["lr_shift"]] = (1 - gengamma_dict["gengamma_fit"].cdf(n_llr_data[n_llr_data > gengamma_dict["lr_shift"]] - gengamma_dict["lr_shift"])) / 2
-        med_p_vals[n_llr_data <= gengamma_dict["lr_shift"]] = np.clip(1 - n_llr_data[n_llr_data <= gengamma_dict["lr_shift"]] / (2 * gengamma_dict["lr_shift"]), .5, 1)
-
         full_p_vals_1 = 1 - chi2(1).cdf(n_llr_data)
         full_p_vals_2 = 1 - chi2(2).cdf(n_llr_data)
 
@@ -135,8 +137,8 @@ for num_gens in num_gens_list:
         gllgka_list = []
         for gla in g_list_data:
             gllgka_list.append(get_llgka_array(gla, k_opt, 0))
-        p_cutoff, g_p_val_matrix, test_vals = bh_procedure_2([n_llr_data, *llrs_data], [nk_array_data, *gllgka_list], gengamma_dict["gengamma_fit"], gengamma_dict["lr_shift"],
-                                                                p_val, bh=False)
+        p_cutoff, g_p_val_matrix, _, test_vals = bh_procedure_2([n_llr_data, *llrs_data], [nk_array_data, *gllgka_list], chi2(1), 0,
+                                                        p_val, bh=False)
         all_het_s_data = [n_hs_data, *hs_data]
         final_classified_vals = correct_for_het(deepcopy(test_vals), all_het_s_data, onep_types)
         n_full = np.array([np.sum(final_classified_vals[0] == i)/final_classified_vals[0].shape[0] for i in np.arange(len(classification_types))])
@@ -188,17 +190,18 @@ for num_gens in num_gens_list:
                 if row_idx == "":
                     continue
 
-        n_full_df = DataFrame(full_excel_array[cut_idx:, :], index=indices[cut_idx:],
-                              columns=classification_types_rows)
+        #account for no more indet. - chop off last row.
+        n_full_df = DataFrame(full_excel_array[cut_idx:, :-1], index=indices[cut_idx:],
+                              columns=classification_types_rows[:-1])
         n_full_df = n_full_df.loc[~(n_full_df == 0).all(axis=1)]
 
         vmax = n_full_df.to_numpy().max()
         vmin = n_full_df.to_numpy().min()
-        fig2, axs = plt.subplots(3, 1, figsize=(4, 4.25), layout="constrained",
+        fig2, axs = plt.subplots(3, 1, figsize=(3.75, 4.25), layout="constrained",
                                  gridspec_kw={'height_ratios': [1, len(final_sel_types), len(final_sel_types)],
                                               'hspace': .1})
 
-        sns.heatmap(n_full_df.iloc[:1, :], vmin=vmin, vmax=vmax, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f",
+        sns.heatmap(n_full_df.iloc[:1, :], vmin=vmin, vmax=vmax, cmap="crest_r", linewidth=.8, cbar=False, fmt=".3f",
                     annot=True, annot_kws={'fontsize': 10}, ax=axs[0])
         sns.heatmap(n_full_df.iloc[1:len(final_sel_types) + 1, :], vmin=vmin, vmax=vmax, cmap="crest_r", linewidth=.8,
                     cbar=False, fmt=".2f", annot=True, annot_kws={'fontsize': 10}, ax=axs[1])
@@ -229,14 +232,15 @@ for num_gens in num_gens_list:
                 Rectangle((diag_pos + 1 + offset, diag_pos + offset), 1 - 2 * offset, 1 - 2 * offset, ec=edge_col,
                           fc='none', lw=lw, alpha=alpha))
         tablename = params_dict_to_str(**{"init_dist": init_dist, "num_gens": num_gens})
-        fig2.savefig(Path(f"{output_dir}/{tablename}_{output_suffix}confusion_plot.pdf"),format="pdf", bbox_inches="tight")
+        fig2.savefig(Path(f"{output_dir}/{tablename}_{output_suffix}confusion_plot_noindet.pdf"),format="pdf", bbox_inches="tight")
 
         fig, axs = plt.subplots(1, 1, figsize=(3.1, 3.1), layout="constrained")
-        logps = [-np.log10(med_p_vals), -np.log10(full_p_vals_1), -np.log10(full_p_vals_2)]
-        labels = ["Gen. gamma", r"$\chi^2(1)$", r"$\chi^2(2)$"]
-        colors = [colorlist[2], "#861A5E", colorlist[0]]
+        logps = [-np.log10(full_p_vals_1), -np.log10(full_p_vals_2)]
+        labels = [r"$\chi^2(1)$", r"$\chi^2(2)$"]
+        colors = [colorlist[2], "#861A5E"]
         axins = axs.inset_axes([.65, .11, .3, .3])
         axs.text(-.2, .97, r"$\bf{D}$", fontsize=13, transform=axs.transAxes)
-        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc = "upper left", thin=True, rasterized=True)
-        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}d2_all_rasterized.pdf"), format="pdf", bbox_inches="tight", dpi=600)
+        plot_qq(axs, axins, logps, labels, colors=colors, legend_loc="upper left", thin=True, rasterized=True)
+        fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}d2_chi2.pdf"),
+                    format="pdf", bbox_inches="tight", dpi=300)
         plt.close(fig)

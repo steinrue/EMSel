@@ -1,6 +1,6 @@
 # GB aDNA Dataset
 
-The scripts in this directory recreate Figures 12-14 of the main text and S.17-S26, S.27B, S.28-S.38 of the Supplementary Material, as well as Table 1 of the main text and Tables S.1-S.4 of the Supplementary Material. This README begins with a set of commands that must be run prior to all figures, then  is organized by which (if any) additional non-plotting scripts must be run to generate a given set of figures. All commands to analyze and produce figures are described therein.
+The scripts in this directory recreate Figures 12-14 of the main text and S.18-S28, S.29B, and S.30-S.39 of the Supplementary Material, as well as Table 1 of the main text and Tables S.1-S.4 of the Supplementary Material. This README begins with a set of commands that must be run prior to all figures, then  is organized by which (if any) additional non-plotting scripts must be run to generate a given set of figures. All commands to analyze and produce figures are described therein.
 
 **Prior to running the scripts in this directory, change the current working directory to this folder.** Also, if you have not already, install the additional plotting packages required by running the command
 ```
@@ -12,7 +12,7 @@ pip install "emsel[plots] @ git+https://github.com/steinrue/EMSel"
 Each figure and table from this section of the manuscript and Supplementary Material requires a full analysis of the GB dataset described in Section 4.1 of the main text. To do so, proceed via the following:
 
 1. Create the subfolders `data`, `EM`, `EM/Ne`, and `output`, and `qsubs` within this subdirectory.
-2. Follow all instructions in the [extract_vcfs/](extract_vcfs/) subfolder. You should now have 44 .vcf files labelled capture_only_c{chr} and capture_SG_c{chr} for chr = (1,2,...,22) (the cX and cY files can be ignored from this point forward), as well as several additional .table files, in the extract_vcfs/extracted subfolder. In addition, step 4 of this process will have created Figures S.17-S.18.
+2. Follow all instructions in the [extract_vcfs/](extract_vcfs/) subfolder. You should now have 44 .vcf files labelled capture_only_c{chr} and capture_SG_c{chr} for chr = (1,2,...,22) (the cX and cY files can be ignored from this point forward), as well as several additional .table files, in the extract_vcfs/extracted subfolder. In addition, step 4 of this process will have created Figures S.18-S.19.
 3. Move the contents of the `extract_vcfs/extracted` subfolder to the `data` subfolder created in step 1.
 4. Run `python SLURM_Ne_final.py` with `EM_dir = Path('EM/Ne')`, `data_dir = Path('data')`, and `genodata_type = "capture_only"` at the beginning of the script. Modify other parameters to your liking. This should produce 462 jobs to submit to the cluster, corresponding to running a grid of 21 Ne values on each of the 22 autosomes. Then run `sh meta_gb_EM.sh` to submit the jobs to the cluster.
 5. Run `python combine_split_runs.py` with `EM_dir = 'EM/Ne'` at the beginning of the script, then run `python interpolate_Ne_grid.py` to get a value of Ne estimated from the dataset. You should get a value of 12202. Now that the value of Ne has been estimated, we can run the full EM-HMM procedure:
@@ -27,7 +27,7 @@ genodata_type = "capture_only"
 classification_types = ["add", "dom", "het", "rec", "full"]
 ```
 
-## Figures 12, 13A, S.23-25, (S.29-36)A, Table 1*, Tables S.1-S.3*
+## Figures 12, 13A, S.24-26, (S.30-37)A, Table 1*, Tables S.1-S.3*
 
 Set the following parameters at the beginning of the script `gb_figures.py` and run it using `python gb_figures.py`:
 ```
@@ -40,7 +40,7 @@ classification_types = ["add", "dom", "rec", "het"]
 
 Note that the asterisk after the tables denotes that the generated tables are lacking the correct data in the "Gene(s)" column and confidence intervals for the selection coefficient estimates. These two datapoints are manually added post-hoc, though the script to simulate and analyze the data for the bootstrapped intervals, `sim_bootstraps.py`, is provided.
 
-## Figures 13B, (S.37-38)A
+## Figures 13B, (S.37-39)A
 
 Set the following parameters at the beginning of the script `mathieson_manhattans.py` and run it using `python mathieson_manhattans.py`:
 ```
@@ -48,7 +48,7 @@ output_dir = "output"
 genodata_type = "capture_only"
 ```
 
-## Figures 13C+D, (S.29-38)B
+## Figures 13C+D, (S.30-39)B
 
 Set the following parameters at the beginning of the script `plot_binned_trajectories.py` and run it using `python plot_binned_trajectories.py`:
 ```
@@ -59,17 +59,9 @@ genodata_type = "capture_only"
 classification_types = ["add", "dom", "rec", "het"]
 ```
 
-## Figures 14, S.22, Table S.4
+## Figures 14, S.23, S.27, Table S.4
 
-To generate these figures, the unconstrained EM must be classified. For this, the file `neutral_g125_dal_special_Ne9715_gengamma_fit.pkl` file is needed. 
-To generate this file, you have several options:
-1. Copy it from the `sample_datasets` folder to the `output` subfolder of this directory.
-2. If you have already generated Figures S.11-S.13, the EM needed to generate this file has been created. Copy the file `neutral_g125_dal_special_Ne9715_EM.pkl` from `../simulations/real_matched/EM` to the `EM` subfolder of this directory. Run `python gb_bootstrap_fitting.py` to generate the `gengamma_fit.pkl` file.
-3. If you have not generated these figures and do not want to, change your working directory to `../simulations/real_matched`. Then, run the first command in the "Figures S.11-S.13" section of the `simulations` README to generate the dataset followed by `emsel data/real_matched/neutral_g125_dal_special_data.csv EM/neutral_g125_dal_special_Ne9715_EM --time_after_zero --full_output --Ne 9715` to analyze it. Lastly, opy the file `neutral_g125_dal_special_Ne9715_EM.pkl` from `../simulations/real_matched/EM` to the `EM` subfolder of this directory. Run `python gb_bootstrap_fitting.py` to generate the `gengamma_fit.pkl` file.
-
-Once the file `neutral_g125_dal_special_Ne9715_gengamma_fit.pkl` exists in the `output` subfolder of this directory, proceed via the following:
-
-5. Set the following parameters at the beginning of the script `add_full_agg.py` and run it using `python add_full_agg.py`:
+To generate these figures, the p-values for the multiple alternatives procedure must be added to the aggregated data .pkl. To do this, set the following parameters at the beginning of the script `add_full_agg.py` and run it using `python add_full_agg.py`:
 ```
 data_dir = "data"
 EM_dir = "EM"
@@ -79,19 +71,18 @@ genodata_type = "capture_only"
 
 This will add the necessary sub-dictionaries to the `agg_data.pkl` file. Then, re-run `python gb_figures.py`, changing the classification_types line to `classification_types = ["full"]` at the beginning of the script.
 
-## Figures S.19+S.20
-
+## Figures S.20-21
 Set the following parameters at the beginning of the script `plot_means_and_missingness.py` and run it using `python plot_means_and_missingness.py`:
 ```
 output_dir = "output"
 genodata_type = "capture_only"
 ```
 
-## Figure S.21
+## Figure S.22
 
 Repeat steps 4-5 of the "All figures" pipeline, replacing `capture_only` with `capture_SG` everywhere it appears, and adding the option `--selection_modes neutral add` to the `emsel` command if you are not using the SLURM script. Then, rerun `python combine_split_runs.py`, `python aggregate_data.py` and `python gb_figures.py`, the latter two with `genodata_type = capture_SG` and `classification_types = ["add"]` substituted for their respective lines in the parameters at the top of the script.
 
-## Figure S.27
+## Figure S.28
 
 Set the following parameters at the beginning of the script `plot_genomewide_correlations.py` and run it using `python plot_genomewide_correlations.py`:
 ```
@@ -99,7 +90,7 @@ output_dir = "output"
 genodata_type = "capture_only"
 ```
 
-## Figure S.28B
+## Figure S.29B
 
 If you have not already done so to create Figures 14/S.15, run `python permute_gb_data.py` with the following parameters at the top of the script:
 ```

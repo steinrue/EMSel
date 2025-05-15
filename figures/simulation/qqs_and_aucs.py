@@ -15,11 +15,11 @@ sel_strs = [.005, .01, .025, .05]
 num_gens_list = [101, 251, 1001]
 init_dists = [.005, .25, "recip"]
 
-#num_gens_list = [125]
-#init_dists = ["real_special"]
+num_gens_list = [125]
+init_dists = ["real_special"]
 
-EM_dir = "EM/pure_sim"
-output_dir = "output/pure_sim"
+EM_dir = "EM/real_matched"
+output_dir = "output/real_matched"
 
 ###### DO NOT MODIFY
 
@@ -117,8 +117,8 @@ for num_gens in num_gens_list:
                 logps.append(full_p_vals)
                 labels.append(convert_from_abbrevs(run_EM_str, shorthet=True))
             thinning = True
-            plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning, rasterized=True)
-            fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}llr_all_rasterized.pdf"), format="pdf", bbox_inches="tight")
+            #plot_qq(axs, axins, logps, labels, legend_loc="upper left", thin=thinning, rasterized=False)
+            #fig.savefig(Path(f"{output_dir}/neutral_g{num_gens}_d{init_dist}_{output_suffix}llr_all_rasterized_noraster.pdf"), format="pdf", bbox_inches="tight", dpi=300)
             plt.close(fig)
 
             big_ts_dict = {}
@@ -130,11 +130,11 @@ for num_gens in num_gens_list:
             fig_height = 4.5 if big_df.shape[0] == len(sel_types_rows) else 3.75
             fig_width = 3.1
             fig2, axs2 = plt.subplots(1,1,figsize=(fig_width,fig_height/(8/fig_width)),layout="constrained")
-            sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", annot=True, annot_kws={'fontsize':10},ax=axs2)
+            sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", vmin=0.5, vmax=1.0, annot=True, annot_kws={'fontsize':10},ax=axs2)
             axs2.text(-.57, 1.1, r"$\bf{C}$", fontsize=13, transform=axs2.transAxes)
             axs2.tick_params(axis='both', which='both', length=0, labeltop=True, labelbottom=False)
             axs2.set_xlabel(r"$\bf{s}$", fontsize=10)
             axs2.xaxis.set_label_position('top')
             axs2.set_ylabel(r"$\bf{Mode}$", fontsize=10)
-            fig2.savefig(f"{output_dir}/{big_ts_str}_{output_suffix}auc_plot.pdf", format="pdf", bbox_inches="tight", dpi=600)
+            fig2.savefig(f"{output_dir}/{big_ts_str}_{output_suffix}auc_plot.pdf", format="pdf", bbox_inches="tight", dpi=300)
             plt.close(fig2)

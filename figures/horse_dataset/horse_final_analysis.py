@@ -14,6 +14,13 @@ EM_dir = "EM"
 output_dir = "output"
 
 ###### DO NOT MODIFY
+def get_maxbased_llr(hf, onep_types, uncon=False):
+    temp_lls = np.zeros_like(hf["neutral_ll"]) - np.inf
+    for onep_run in onep_types:
+        temp_lls = np.maximum(temp_lls, hf[f"{onep_run}_run"]["ll_final"])
+    if uncon:
+        temp_lls = np.maximum(temp_lls, hf["full_run"]["ll_final"]-1)
+    return 2*(temp_lls-hf["neutral_ll"])
 
 plt.rcParams.update({'font.size': 9,
                      'text.usetex': False,
@@ -30,7 +37,7 @@ plt.rcParams["axes.prop_cycle"] = cycler(color=colorlist)
 
 suffixes = ["full"]
 labels = ["B", "C"]
-init_ests = ["neut", "uncon"]
+init_ests = ["neut", "het"]
 k_opt = 1
 chi2_dist = chi2(1)
 
@@ -38,31 +45,33 @@ onep_types = ["add", "dom", "rec", "het"]
 
 all_types = ["add", "dom", "rec", "het", "full"]
 
-fancy_col_names = ["Add.\ ($s_2$)", "Dom.\ ($s_2$)", "Rec.\ ($s_2$)", "Het.\ diff. ($s_1$)", "Uncons.\ $(s_1, s_2)$"]
+fancy_col_names = ["Add.\ ($s_2$)", "Dom.\ ($s_2$)", "Rec.\ ($s_2$)", "Het.\ diff. ($s_1$)"]
 
 for suffix in suffixes:
     with open(Path(f"{EM_dir}/horse_data_{suffix}_EM.pkl"), "rb") as file:
         hf = pickle.load(file)
     n_ll = hf["neutral_ll"][0]
+    onep_llrs = []
     for sel_type in onep_types:
         nn_ll = hf[f"{sel_type}_run"]["ll_final"][0]
         llr = 2 * (nn_ll - n_ll)
         p_val = -chi2_dist.logsf(llr) / np.log(10)
+        onep_llrs.append(llr)
         print(f"{suffix} {sel_type} llr: {llr:.3f} logp-value: {p_val:.3f} p-val {np.power(10, -p_val):.8f}")
     full_ll = hf["full_run"]["ll_final"][0]
-    d2_stat = 2 * (full_ll - n_ll)
+    dll_stat = max(onep_llrs)
     for i, init_est in enumerate(init_ests):
         with open(Path(f"{EM_dir}/{suffix}_Ne16000_{init_est}_final_sims_EM.pkl"), "rb") as file:
             bootf = pickle.load(file)
 
         boot_n_lls = bootf["neutral_ll"]
         boot_full_lls = bootf["full_run"]["ll_final"]
-        boot_d2s = 2*(boot_full_lls-boot_n_lls)
-        print(f"{suffix} empirical percentile: {(boot_d2s<d2_stat).mean():.3f}")
+        boot_dlls = get_maxbased_llr(bootf, onep_types, uncon=False)
+        print(f"{suffix} empirical percentile: {(boot_dlls<dll_stat).mean():.3f}")
         fig, axs = plt.subplots(1,1,figsize=(3.1, 1.45), layout="constrained")
-        axs.hist(boot_d2s, bins=np.arange(np.max(boot_d2s)+1), label="Simulations")
-        axs.axvline(d2_stat, color="red", ls="--", label="ASIP $D_2$ value")
-        axs.set_xlabel(r"$D_2$ statistic")
+        axs.hist(boot_dlls, bins=np.arange(np.max(boot_dlls)+1), label="Simulations")
+        axs.axvline(dll_stat, color="red", ls="--", label="ASIP $\delta$ value")
+        axs.set_xlabel(r"$\delta$ statistic")
         axs.set_ylabel("Counts")
         axs.set_ylim([0, 700])
         axs.legend()
@@ -84,7 +93,7 @@ full_p_list = []
 trunc_s_list = []
 trunc_ll_list = []
 trunc_p_list = []
-for final_s_type in all_types:
+for final_s_type in onep_types:
     full_nn_ll = full_hf[f"{final_s_type}_run"]["ll_final"][0]
     full_llr = (full_nn_ll - full_n_ll)
 

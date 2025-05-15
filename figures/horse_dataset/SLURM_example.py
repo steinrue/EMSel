@@ -26,8 +26,6 @@ def writeQsubs():
                 sbatchfile = Path(qsub_dir, f"{fpath.stem}_EM.sbatch")
                 sbatchOutFile = Path(qsub_dir, f"{fpath.stem}_EM.sout")
                 sbatchErrFile = Path(qsub_dir, f"{fpath.stem}_EM.serr")
-                if "2tp" not in fpath.name:
-                    continue
                 if "perm" in fpath.name:
                     num_cores = 20
                     hmm_cmd = f"emsel {fpath} {out_name} --time_after_zero --full_output --num_cores {num_cores} -Ne 2500 --selection_modes neutral add full --progressbar"

@@ -40,7 +40,7 @@ nt = sampling_matrix[:, 1]
 sample_times = sampling_matrix.shape[0]
 sample_locs = sampling_matrix[:, 0]
 num_gens = sampling_matrix[-1, 0] + 1
-for init_est in ["neut", "uncon"]:
+for init_est in ["neut", "het"]:
     ps_table = np.loadtxt(f"{data_dir}/{suffix}_{init_est}_means.txt")
     assert ps_table.shape[0] == 2
     p = np.zeros(num_sims) + ps_table[-1]
@@ -91,5 +91,5 @@ for init_est in ["neut", "uncon"]:
     axs.fill_between(np.arange(overall_mean.shape[0]), lower_q, upper_q, alpha=.5)
     axs.set_title(f"{suffix}_Ne{Ne}_{init_est}")
     axs.set_ylim([0, 1])
-    fig.savefig(f"{output_dir}/{suffix}_Ne{Ne}_{init_est}_final_trajs.pdf", format="pdf", bbox_inches="tight")
+    fig.savefig(f"{output_dir}/{suffix}_Ne{Ne}_{init_est}_rev_trajs.pdf", format="pdf", bbox_inches="tight")
     plt.close(fig)

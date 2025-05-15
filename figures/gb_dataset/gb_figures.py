@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import pickle
-from emsel.emsel_util import bh_correct, extendedFisher, windowMatrix, convert_from_abbrevs, plot_qq
+from emsel.emsel_util import bh_correct, extendedFisher, windowMatrix, convert_from_abbrevs, plot_qq, convert_to_abbrevs
 import pandas as pd
 
 ###### MODIFY
@@ -11,7 +11,7 @@ data_dir = "data"
 EM_dir = "EM"
 output_dir = "output"
 genodata_type = "capture_only"
-classification_types = ["add", "dom", "rec", "het"]
+classification_types = ["full"]
 suffix = ""
 
 ###### DO NOT MODIFY
@@ -128,7 +128,7 @@ for c_type in classification_types:
     sw_alt = []
     sw_chridxmaxs = []
     sw_genes = []
-    last_col_name = r"$\hat{s}(p_{min})$" if c_type != "full" else r"$\widehat{s_1, s_2}(p_{min})$"
+    last_col_name = r"$\hat{s}(p_{min})$" if c_type != "full" else r"$\hat{s}(p_{min})$ (Sel. type)"
     for sig_window in valid_windows:
         full_window = np.arange(sig_window[0], sig_window[-1]+1)
         lpos = cdata["all_loc_per_chrom"][min(sig_window)]
@@ -143,7 +143,15 @@ for c_type in classification_types:
         sw_rsidmax.append(cdata["all_rsid"][full_window[window_argmax]])
         sw_ref.append(cdata["all_ref_allele"][full_window[window_argmax]])
         sw_alt.append(cdata["all_alt_allele"][full_window[window_argmax]])
-        sw_spmax.append(cdata["all_s"][f"{c_type}_s"][full_window[np.argmax(window_p_vals)]])
+        if c_type == "full":
+            window_mask = (snp_df["snp_idx"] >= sig_window[0]) & (snp_df["snp_idx"] <= sig_window[-1])
+            max_loc = np.argmax(snp_df["p"][window_mask])
+            max_class = snp_df["classes"][window_mask][max_loc]
+            sw_spmax_temp_val = cdata['all_s'][f'{onep_classification_types[int(max_class)-1]}_s'][full_window[np.argmax(window_p_vals)]]
+            sw_spmax_str = f"{sw_spmax_temp_val:.3f} ({full_labels[int(max_class)-1]})"
+            sw_spmax.append(sw_spmax_str)
+        else:
+            sw_spmax.append(cdata["all_s"][f"{c_type}_s"][full_window[np.argmax(window_p_vals)]])
         sw_llmax.append(cdata["all_ll"][f"{c_type}_ll"][full_window[np.argmax(window_p_vals)]])
         sw_chrom = int(cdata["all_chrom"][sig_window[0]])
         sw_chrs.append(sw_chrom)
@@ -157,8 +165,6 @@ for c_type in classification_types:
         sw_chridxmaxs.append(full_window[window_argmax]-cdata["all_loc"][f"chr_{sw_chrom}_idx_offset"])
         sw_genes.append("TBD")
     if len(sw_lpos) > 0:
-        if c_type == "full":
-            sw_spmax = [f"({s_val[0]:.4f}, {s_val[1]:.4f})" for s_val in sw_spmax]
         sw_array = np.array([sw_type, sw_chrs, sw_lpos, sw_rpos, sw_raw_nums, sw_nums, sw_pmax, sw_spmax, sw_llmax,
                              sw_idxmax, sw_argpmax, sw_rsidmax, sw_ref, sw_alt, sw_raw_snps, sw_snps, sw_chridxmaxs, sw_genes]).T
         brown_windows = pd.DataFrame(sw_array, columns=["Sel. type", "Chr.", "Left pos.", "Right pos.", "Raw", "Post", r"$-\log_{10}p_{min}$", last_col_name, r"ll at $s(p_{min})$", "SNP index of max.", "Chr pos of max.", "Lead SNP", "Ref.", "Alt.", "Raw_SNP_list", "Post_SNP_list", "SNP. index of max (on chr).", "Gene(s)"])
@@ -193,7 +199,7 @@ for c_type in classification_types:
     axs.legend()
     axs.set_ylim([0, 18])
     axs.set_xlim([0, cdata["all_loc_all_chrom"][-1]*1.001])
-    fig.savefig(f"{output_dir}/{genodata_type}_{c_type}_manhattan_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=600)
+    fig.savefig(f"{output_dir}/{genodata_type}_{c_type}_manhattan_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=300)
     plt.close(fig)
 
 #qq plots
@@ -203,4 +209,4 @@ if "full" in classification_types:
     logps = [cdata['all_p'][f'{ctype}_p'] for ctype in all_classification_types]
     labels = convert_from_abbrevs(all_classification_types, shorthet=True)
     plot_qq(axs, axins, logps, labels, legend_loc="upper right", thin=True, rasterized=True)
-    fig.savefig(f"{output_dir}/{genodata_type}_all_qqs_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=600)
+    fig.savefig(f"{output_dir}/{genodata_type}_all_qqs_rasterized.pdf", format="pdf", bbox_inches="tight", dpi=300)

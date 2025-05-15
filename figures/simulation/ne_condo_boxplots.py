@@ -14,15 +14,15 @@ from copy import deepcopy
 
 ###### MODIFY
 
-data_dir = "data/ibdne/boxplots"
-EM_dir = "EM/ibdne/boxplots"
-output_dir = "output/ibdne"
+data_dir = "data/pure_sim/boxplots"
+EM_dir = "EM/pure_sim/boxplots"
+output_dir = "output/pure_sim"
 
-sim_Nes = [2500, 10000, 40000]
-prefixes = [*[f"g251_d25_Ne{sim_Ne}" for sim_Ne in sim_Nes]]
-labels = [rf"$N_e = {{{str(i)}}}$" for i in sim_Nes]
-EM_dirs = ["EM/pure_sim/boxplots", "EM/pure_sim/boxplots", "EM/pure_sim/boxplots"]
-true_maxes = [2500, 10000, 40000]
+# sim_Nes = [2500, 10000, 40000]
+# prefixes = [*[f"g251_d25_Ne{sim_Ne}" for sim_Ne in sim_Nes]]
+# labels = [rf"$N_e = {{{str(i)}}}$" for i in sim_Nes]
+# EM_dirs = ["EM/pure_sim/boxplots", "EM/pure_sim/boxplots", "EM/pure_sim/boxplots"]
+# true_maxes = [2500, 10000, 40000]
 
 prefixes = ["g125_dal_special_realmatch", "g125_dal_special_ibdne"]#
 labels = ["Real matched", "IBDNe"]#
@@ -80,6 +80,8 @@ for p_i, prefix in enumerate(prefixes):
 
         all_ests.append(Nes_space[np.argmax(condo_spline_output)])
         all_labels.append(labels[p_i])
+
+#print([f"{est:.0f}" for est in all_ests])
 
 massaged_data = zip(all_ests, all_labels)
 data_df = pd.DataFrame(massaged_data, columns=[r"$\hat{N}_e$", "Dataset"])

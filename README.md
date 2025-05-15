@@ -30,9 +30,10 @@ The CSV should be formatted as the following:
 - each row should contain 3N non-zero values, consisting of N samples each formatted as the triple (sampling time, number of derived alleles, number of total samples).
 - samples of size zero are allowed, and are interpreted identically to a gap between sampling times.
 - rows do not need to have the same length.
+- rows containing no samples are allowed and will not cause an error; EMSel automatically filters rows with fewer than two non-zero sampling timepoints.
 - sampling times can be expressed in years or generations: see the use of the -ytg flag below.
 
-An example of a properly-formatted CSV is available in `sample_datasets/add_s025_g251_d25_data.csv`
+An example of a properly-formatted CSV is available in `sample_datasets/add_s025_g251_d25_data.csv`.
 
 ### Using EMSEL with VCFs
 
@@ -73,12 +74,12 @@ and the following optional arguments:
 
 
 -maf, --min_allele_freq <float, default=0.05>
-    Minor allele frequency (MAF) threshold to filter replicates by.
+    Minor allele frequency (MAF) threshold to  replicates by.
     Replicates with min(mean(ref_allele), mean(alt_allele)) < MAF are masked.
 
 
 --min_sample_density <float, default=0.1>
-    Minimum sample density to filter replicates by.
+    Minimum sample density to  replicates by.
     Replicates with sum(num_samples) < (max_samples * min_sample_density_thresh) are masked.
     max_samples is calculated correctly (inferring haploids/diploids) from a VCF, and simply
     computed as max(sum(num_samples, axis=1)) for CSVs, where the sum is taken across

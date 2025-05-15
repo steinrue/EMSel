@@ -104,7 +104,7 @@ fig_height = 4.5 if big_df.shape[0] == len(sel_types_rows) else 3.75
 fig_width = 3.1
 add_em_auc_fig, add_em_auc_axs = plt.subplots(1, 1, figsize=(fig_width, fig_height/(8/fig_width)), layout="constrained")
 add_em_auc_axs.text(-.55, 1.05, r"$\bf{C}$", fontsize=13, transform=add_em_auc_axs.transAxes)
-sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", annot=True, annot_kws={'fontsize':10}, ax=add_em_auc_axs)
+sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", vmin=0.5, vmax=1.0, annot=True, annot_kws={'fontsize':10}, ax=add_em_auc_axs)
 add_em_auc_axs.tick_params(axis='both', which='both', length=0, labeltop=True, labelbottom=False)
 add_em_auc_axs.set_xlabel(r"$\bf{s}$", fontsize=10)
 add_em_auc_axs.xaxis.set_label_position('top')
@@ -166,7 +166,7 @@ big_df = big_df.loc[~(big_df == 0).all(axis=1)]
 fig_height = 4.5 if big_df.shape[0] == len(sel_types_rows) else 3.75
 fig_width = 3.1
 add_sim_auc_fig, add_sim_auc_axs = plt.subplots(1, 1, figsize=(fig_width, fig_height/(8/fig_width)), layout="constrained")
-sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", annot=True, annot_kws={'fontsize':10}, ax=add_sim_auc_axs)
+sns.heatmap(big_df, cmap="crest_r", linewidth=.8, cbar=False, fmt=".2f", vmin=0.5, vmax=1.0, annot=True, annot_kws={'fontsize':10}, ax=add_sim_auc_axs)
 add_sim_auc_axs.text(-.35, 1.2, r"$\bf{D}$", fontsize=13, transform=add_sim_auc_axs.transAxes)
 add_sim_auc_axs.tick_params(axis='both', which='both', length=0, labeltop=True, labelbottom=False)
 add_sim_auc_axs.set_xlabel(r"$\bf{s}$", fontsize=10)

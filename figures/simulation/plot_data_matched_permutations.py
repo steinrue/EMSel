@@ -76,5 +76,5 @@ axs.plot(-np.log10(np.arange(1, len_ps + 1) / len_ps),
 handles, labels = axins.get_legend_handles_labels()
 axs.legend(handles, labels, loc="upper right")
 
-fig.savefig(Path(f"{output_dir}/rf_permutations_rasterized.pdf"), format="pdf", bbox_inches="tight", dpi=600)
+fig.savefig(Path(f"{output_dir}/rf_permutations_rasterized.pdf"), format="pdf", bbox_inches="tight", dpi=300)
 plt.close(fig)
