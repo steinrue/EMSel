@@ -9,7 +9,7 @@ We extract two datasets: One where `Data Source` is 1240K capture and shotgun, a
 
 The scripts use the the 1240K data from the AADR to extract genotypes (required) and the HO data from the AADR to produce PCA plots (optional). The scripts are configured to work with version v54.1 of the AADR.
 
-The scripts are configured to expect the AADR to be located in a subdirectory named `AADR/`. To this end, download both the HO and 1240K data from the AADR v54.1 at https://reichdata.hms.harvard.edu/pub/datasets/amh_repo/curated_releases/index_v54.1.html . Then place the respective files in the subdirectory as follows:
+The scripts are configured to expect the AADR to be located in a subdirectory named `AADR/`. To this end, download both the HO and 1240K data from the AADR v54.1 at https://doi.org/10.7910/DVN/FFIDCW (Version 7.0). Then place the respective files in the subdirectory as follows:
 ```
 AADR/v54.1_HO/v54.1_HO_public.anno
 AADR/v54.1_HO/v54.1_HO_public.geno
