@@ -32,6 +32,7 @@ def main():
     parser.add_argument("--no_small_s", action="store_true", help="whether or not to use the small s approximation in the WF update")
     parser.add_argument("--suffix", type=str, default="", help="file names suffix to differentiate")
     parser.add_argument("--vary_Ne", type=str, default="", help="input the path to a .txt file containing a list of Nes to use instead of a constant Ne")
+    parser.add_argument("--time_before_present", action="store_true", help="for use with --data_matched flag to indicate times in the first column of the sampling table indicate the number of generations between the sample and the present")
     args = parser.parse_args()
 
     if args.Ne is not None:
@@ -85,8 +86,10 @@ def main():
         missingness_file = np.loadtxt(args.data_matched[1])
         if missingness_file[0] != .1:
             print("WARING: first value of missingness file is not 0.1 - may not be a missingness filter")
-        sampling_matrix[:, 0] = sampling_matrix[-1, 0] - sampling_matrix[:, 0]
-        sampling_matrix = np.flip(sampling_matrix, axis=0)
+        sampling_matrix[:, 0] = sampling_matrix[:, 0] - np.min(sampling_matrix[:, 0])
+        if args.time_before_present:
+            sampling_matrix[:, 0] = np.max(sampling_matrix[:, 0]) - sampling_matrix[:, 0]
+        sampling_matrix = sampling_matrix[np.argsort(sampling_matrix[:, 0])]
         args_dict["g_list"] = [sampling_matrix[-1, 0] + 1]
         args_dict["ic_list"] = ["real_special"]
         args_dict["means_path"] = args.data_matched[0]
