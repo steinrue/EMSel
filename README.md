@@ -348,7 +348,10 @@ Number of replicates simulated from each set of simulation parameters.
     sample_sizes.table file can be obtained by running the pipeline in the
     figures/gb_dataset/extract_vcfs folder. Example files are also provided.
 
-
+--time_before_present
+    Use this flag if the first column of the sample_sizes.table file provided to the
+    --data_matched flag measures time in generations before present, rather than
+    generations after zero.
 
 
 --no_small_s
