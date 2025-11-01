@@ -32,6 +32,7 @@ The CSV should be formatted as the following:
 - rows do not need to have the same length.
 - rows containing no samples are allowed and will not cause an error; EMSel automatically filters rows with fewer than two non-zero sampling timepoints.
 - sampling times can be expressed in years or generations: see the use of the -ytg flag below.
+- within each row, sampling times must be unique.
 
 An example of a properly-formatted CSV is available in `sample_datasets/add_s025_g251_d25_data.csv`.
 
