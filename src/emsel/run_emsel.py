@@ -119,7 +119,8 @@ def main():
         raise ValueError("File must be a .csv, .vcf, or .vcf.gz!")
 
     for r_i in np.arange(hmm_data["sample_times"].shape[0]):
-        assert np.unique(hmm_data["sample_times"][r_i, :]).shape[0] == hmm_data["sample_times"].shape[1], "sampling times must be unique!"
+        if np.unique(hmm_data["sample_times"][r_i, :]).shape[0] != hmm_data["sample_times"].shape[1]:
+            raise ValueError("sampling times must be unique!")
 
     total_fd = np.sum(hmm_data["final_data"], axis=1)
     total_ns = np.sum(hmm_data["num_samples"], axis=1)
