@@ -99,7 +99,7 @@ def main():
         hmm_data["num_samples"] = pf[:, 1::3].astype(int)
         hmm_data["sample_times"] = (pf[:, ::3] / hmm_dd["ytg"]).astype(int)
         if args.time_before_present:
-            hmm_data["sample_times"] = np.max(hmm_data["sample_times"], axis=1)-hmm_data["sample_times"]
+            hmm_data["sample_times"] = np.max(hmm_data["sample_times"], axis=1)[:,np.newaxis]-hmm_data["sample_times"]
         max_samples = np.max(np.sum(hmm_data["num_samples"], axis=1))
     elif pd_path.suffix == ".vcf" or pd_path.suffixes == [".vcf", ".gz"]:
         print("processing VCF...")
